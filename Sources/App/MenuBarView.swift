@@ -1,30 +1,36 @@
 import SwiftUI
 
-/// Menu bar dropdown for quick controls.
+/// Menu bar dropdown with per-photo controls and thumbnails.
 struct MenuBarView: View {
     @ObservedObject var manager: PhotoManager
 
     var body: some View {
-        Button("Add Photo…") {
-            pickFile()
-        }
+        Button("Add Photo…") { pickFile() }
 
         if !manager.photos.isEmpty {
             Divider()
 
             ForEach(manager.photos) { item in
-                let label = item.isVisible ? "Hide" : "Show"
-                let icon = item.isVisible ? "eye.slash" : "eye"
-                Button {
-                    manager.toggleVisibility(item.id)
-                } label: {
-                    Label("\(label) Photo", systemImage: icon)
+                Menu(manager.label(for: item)) {
+                    Button(item.isVisible ? "Hide" : "Show") {
+                        manager.toggleVisibility(item.id)
+                    }
+
+                    Button(item.isLocked ? "Unlock Position" : "Lock Position") {
+                        manager.toggleLock(item.id)
+                    }
+
+                    Divider()
+
+                    Button("Remove") {
+                        manager.removePhoto(item.id)
+                    }
                 }
             }
 
             Divider()
 
-            Button("Remove All") {
+            Button("Remove All Photos") {
                 manager.removeAllPhotos()
             }
         }
@@ -50,9 +56,7 @@ struct MenuBarView: View {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.prompt = "Add"
-
         NSApp.activate(ignoringOtherApps: true)
-
         if panel.runModal() == .OK {
             for url in panel.urls {
                 if let img = NSImage(contentsOf: url) {

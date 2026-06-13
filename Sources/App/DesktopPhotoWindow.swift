@@ -1,11 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// A borderless, always-on-desktop window that displays a photo
-/// at its exact aspect ratio with rounded corners, shadow, and resize handles.
+/// A borderless, always-on-desktop window that displays a photo.
 class DesktopPhotoWindow: NSWindow {
     var photoId: UUID?
-    var onDoubleClick: (() -> Void)?
+    var onLockToggle: (() -> Void)?
+    var onRemove: (() -> Void)?
     var onResize: ((CGFloat) -> Void)?
 
     init() {
@@ -21,8 +21,6 @@ class DesktopPhotoWindow: NSWindow {
         backgroundColor = .clear
         hasShadow = true
         ignoresMouseEvents = false
-        isMovable = true
-        isMovableByWindowBackground = true
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         hidesOnDeactivate = false
     }
@@ -35,19 +33,20 @@ class DesktopPhotoWindow: NSWindow {
         guard imageSize.width > 0, imageSize.height > 0 else { return }
 
         let aspectRatio = imageSize.width / imageSize.height
-        let windowWidth = baseWidth
-        let windowHeight = windowWidth / aspectRatio
+        let w = baseWidth
+        let h = w / aspectRatio
 
         let container = DraggablePhotoView(
-            frame: NSRect(x: 0, y: 0, width: windowWidth, height: windowHeight),
+            frame: NSRect(x: 0, y: 0, width: w, height: h),
             image: image,
             locked: locked
         )
-        container.onDoubleClick = { [weak self] in self?.onDoubleClick?() }
-        container.onResize = { [weak self] newWidth in self?.onResize?(newWidth) }
+        container.onLockToggle = { [weak self] in self?.onLockToggle?() }
+        container.onRemove = { [weak self] in self?.onRemove?() }
+        container.onResizeFinished = { [weak self] newWidth in self?.onResize?(newWidth) }
 
         contentView = container
-        setContentSize(NSSize(width: windowWidth, height: windowHeight))
+        setContentSize(NSSize(width: w, height: h))
         makeKeyAndOrderFront(nil)
     }
 
@@ -60,24 +59,20 @@ class DesktopPhotoWindow: NSWindow {
     func resizeTo(width: CGFloat) {
         guard let container = contentView as? DraggablePhotoView,
               let image = container.photoImage else { return }
-        let aspectRatio = image.size.width / image.size.height
-        let newHeight = width / aspectRatio
-
-        var newFrame = frame
-        newFrame.size = NSSize(width: width, height: newHeight)
+        let ar = image.size.width / image.size.height
+        let h = width / ar
+        let newFrame = NSRect(x: frame.origin.x, y: frame.origin.y, width: width, height: h)
         setFrame(newFrame, display: true, animate: true)
-
-        container.frame = NSRect(x: 0, y: 0, width: width, height: newHeight)
-        container.imageView.frame = container.bounds
+        container.updateLayout(NSSize(width: width, height: h))
     }
 }
 
-// MARK: - Resize Edge
+// MARK: - Resize Handle
 
-enum ResizeEdge {
+private enum DragMode {
     case none
-    case left, right, top, bottom
-    case topLeft, topRight, bottomLeft, bottomRight
+    case move
+    case resizeTopLeft, resizeTopRight, resizeBottomLeft, resizeBottomRight
 }
 
 // MARK: - Draggable Photo View
@@ -86,16 +81,19 @@ class DraggablePhotoView: NSView {
     let imageView: NSImageView
     var photoImage: NSImage? { imageView.image }
     var isLocked = false
-    var onDoubleClick: (() -> Void)?
-    var onResize: ((CGFloat) -> Void)?
 
-    private var initialMouseLocation: NSPoint = .zero
-    private var initialWindowOrigin: NSPoint = .zero
-    private var initialWindowSize: NSSize = .zero
-    private var activeEdge: ResizeEdge = .none
-    private let handleSize: CGFloat = 8
+    var onLockToggle: (() -> Void)?
+    var onRemove: (() -> Void)?
+    var onResizeFinished: ((CGFloat) -> Void)?
 
-    init(frame: NSRect, image: NSImage, locked: Bool = false) {
+    private var dragMode: DragMode = .none
+    private var initialMouse: NSPoint = .zero
+    private var anchorPoint: NSPoint = .zero   // the fixed corner (screen coords)
+    private var aspectRatio: CGFloat = 1.0
+    private let handleZone: CGFloat = 12
+    private let minSize: CGFloat = 80
+
+    init(frame: NSRect, image: NSImage, locked: Bool) {
         imageView = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
         imageView.image = image
         imageView.imageScaling = .scaleProportionallyUpOrDown
@@ -104,6 +102,7 @@ class DraggablePhotoView: NSView {
         imageView.layer?.masksToBounds = true
         imageView.layer?.cornerCurve = .continuous
         self.isLocked = locked
+        self.aspectRatio = image.size.width / image.size.height
 
         super.init(frame: frame)
 
@@ -115,203 +114,196 @@ class DraggablePhotoView: NSView {
 
         addSubview(imageView)
 
-        // Track mouse for cursor changes
-        let trackingArea = NSTrackingArea(
-            rect: bounds,
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
             options: [.activeAlways, .mouseMoved, .inVisibleRect, .mouseEnteredAndExited],
-            owner: self,
-            userInfo: nil
-        )
-        addTrackingArea(trackingArea)
+            owner: self
+        ))
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // MARK: - Hit Testing
+    func updateLayout(_ size: NSSize) {
+        frame = NSRect(origin: .zero, size: size)
+        imageView.frame = bounds
+        // Keep corner radius reasonable
+        imageView.layer?.cornerRadius = min(16, min(size.width, size.height) * 0.08)
+    }
 
-    private func edgeAt(_ point: NSPoint) -> ResizeEdge {
-        let h = handleSize
+    // MARK: - Hit zones
+
+    private func modeAt(_ localPoint: NSPoint) -> DragMode {
+        let h = handleZone
         let w = bounds.width
         let ht = bounds.height
 
-        let onLeft = point.x < h
-        let onRight = point.x > w - h
-        let onBottom = point.y < h
-        let onTop = point.y > ht - h
+        let nearLeft = localPoint.x < h
+        let nearRight = localPoint.x > w - h
+        let nearBottom = localPoint.y < h
+        let nearTop = localPoint.y > ht - h
 
-        if onTop && onLeft { return .topLeft }
-        if onTop && onRight { return .topRight }
-        if onBottom && onLeft { return .bottomLeft }
-        if onBottom && onRight { return .bottomRight }
-        if onLeft { return .left }
-        if onRight { return .right }
-        if onTop { return .top }
-        if onBottom { return .bottom }
-        return .none
-    }
-
-    private func isCorner(_ edge: ResizeEdge) -> Bool {
-        switch edge {
-        case .topLeft, .topRight, .bottomLeft, .bottomRight: return true
-        default: return false
-        }
+        if nearBottom && nearLeft { return .resizeBottomLeft }
+        if nearBottom && nearRight { return .resizeBottomRight }
+        if nearTop && nearLeft { return .resizeTopLeft }
+        if nearTop && nearRight { return .resizeTopRight }
+        return .move
     }
 
     // MARK: - Cursor
 
     override func mouseMoved(with event: NSEvent) {
         if isLocked { NSCursor.arrow.set(); return }
-        let point = convert(event.locationInWindow, from: nil)
-        let edge = edgeAt(point)
-        switch edge {
-        case .left, .right:
-            NSCursor.resizeLeftRight.set()
-        case .top, .bottom:
-            NSCursor.resizeUpDown.set()
-        case .topLeft, .bottomRight:
-            // Diagonal — use a standard arrow with resize semantics
+        let p = convert(event.locationInWindow, from: nil)
+        switch modeAt(p) {
+        case .resizeTopLeft, .resizeBottomRight:
             NSCursor.crosshair.set()
-        case .topRight, .bottomLeft:
+        case .resizeTopRight, .resizeBottomLeft:
             NSCursor.crosshair.set()
-        case .none:
+        case .move:
             NSCursor.openHand.set()
+        case .none:
+            NSCursor.arrow.set()
         }
     }
 
-    override func mouseExited(with event: NSEvent) {
-        NSCursor.arrow.set()
-    }
+    override func mouseExited(with event: NSEvent) { NSCursor.arrow.set() }
 
-    override func cursorUpdate(with event: NSEvent) {
-        // Prevent system cursor overrides
-    }
-
-    // MARK: - Mouse Events
+    // MARK: - Mouse events
 
     override func mouseDown(with event: NSEvent) {
+        // Double-click → toggle lock
         if event.clickCount == 2 {
-            onDoubleClick?()
+            onLockToggle?()
             return
         }
+
         if isLocked { return }
 
-        let point = convert(event.locationInWindow, from: nil)
-        activeEdge = edgeAt(point)
-        initialMouseLocation = NSEvent.mouseLocation
-        initialWindowOrigin = window?.frame.origin ?? .zero
-        initialWindowSize = window?.frame.size ?? .zero
+        guard let win = window else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        dragMode = modeAt(p)
+        initialMouse = NSEvent.mouseLocation
+
+        let f = win.frame
+        // Set anchor = the corner OPPOSITE to the one being dragged
+        switch dragMode {
+        case .resizeBottomRight: anchorPoint = NSPoint(x: f.minX, y: f.maxY) // top-left fixed
+        case .resizeBottomLeft:  anchorPoint = NSPoint(x: f.maxX, y: f.maxY) // top-right fixed
+        case .resizeTopRight:    anchorPoint = NSPoint(x: f.minX, y: f.minY) // bottom-left fixed
+        case .resizeTopLeft:     anchorPoint = NSPoint(x: f.maxX, y: f.minY) // bottom-right fixed
+        default: break
+        }
     }
 
     override func mouseDragged(with event: NSEvent) {
         if isLocked { return }
-        guard let window = window, let image = photoImage else { return }
+        guard let win = window else { return }
 
-        let currentMouse = NSEvent.mouseLocation
-        let dx = currentMouse.x - initialMouseLocation.x
-        let dy = currentMouse.y - initialMouseLocation.y
+        let mouse = NSEvent.mouseLocation
 
-        if activeEdge == .none {
-            // Move
-            let newOrigin = NSPoint(
-                x: initialWindowOrigin.x + dx,
-                y: initialWindowOrigin.y + dy
-            )
-            window.setFrameOrigin(newOrigin)
-            return
+        switch dragMode {
+        case .move:
+            let dx = mouse.x - initialMouse.x
+            let dy = mouse.y - initialMouse.y
+            let oldOrigin = win.frame.origin
+            win.setFrameOrigin(NSPoint(
+                x: oldOrigin.x + dx,
+                y: oldOrigin.y + dy
+            ))
+            initialMouse = mouse
+
+        case .resizeBottomRight:
+            // Anchor = top-left. Dragged corner = bottom-right.
+            // In macOS coords: anchor is (minX, maxY) → top-left
+            let desiredW = max(minSize, mouse.x - anchorPoint.x)
+            let newW = desiredW
+            let newH = newW / aspectRatio
+            let newX = anchorPoint.x
+            let newY = anchorPoint.y - newH  // top-left stays, bottom moves
+            applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
+
+        case .resizeBottomLeft:
+            // Anchor = top-right
+            let desiredW = max(minSize, anchorPoint.x - mouse.x)
+            let newW = desiredW
+            let newH = newW / aspectRatio
+            let newX = anchorPoint.x - newW
+            let newY = anchorPoint.y - newH
+            applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
+
+        case .resizeTopRight:
+            // Anchor = bottom-left
+            let desiredW = max(minSize, mouse.x - anchorPoint.x)
+            let newW = desiredW
+            let newH = newW / aspectRatio
+            let newX = anchorPoint.x
+            let newY = anchorPoint.y  // bottom stays
+            applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
+
+        case .resizeTopLeft:
+            // Anchor = bottom-right
+            let desiredW = max(minSize, anchorPoint.x - mouse.x)
+            let newW = desiredW
+            let newH = newW / aspectRatio
+            let newX = anchorPoint.x - newW
+            let newY = anchorPoint.y  // bottom stays
+            applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
+
+        case .none:
+            break
         }
+    }
 
-        // Resize
-        let aspectRatio = image.size.width / image.size.height
-        let minWidth: CGFloat = 100
-        let maxWidth: CGFloat = 1200
-
-        var newWidth = initialWindowSize.width
-        var newHeight = initialWindowSize.height
-        var newX = initialWindowOrigin.x
-        var newY = initialWindowOrigin.y
-
-        if isCorner(activeEdge) {
-            // CORNERS: maintain aspect ratio
-            // Use the larger delta to drive the resize
-            let absDx = abs(dx)
-            let absDy = abs(dy)
-            let delta = absDx > absDy ? dx : dy * aspectRatio
-
-            switch activeEdge {
-            case .bottomRight:
-                newWidth = max(minWidth, min(maxWidth, initialWindowSize.width + delta))
-                newHeight = newWidth / aspectRatio
-            case .bottomLeft:
-                newWidth = max(minWidth, min(maxWidth, initialWindowSize.width - delta))
-                newHeight = newWidth / aspectRatio
-                newX = initialWindowOrigin.x + (initialWindowSize.width - newWidth)
-            case .topRight:
-                newWidth = max(minWidth, min(maxWidth, initialWindowSize.width + delta))
-                newHeight = newWidth / aspectRatio
-                newY = initialWindowOrigin.y + (initialWindowSize.height - newHeight)
-            case .topLeft:
-                newWidth = max(minWidth, min(maxWidth, initialWindowSize.width - delta))
-                newHeight = newWidth / aspectRatio
-                newX = initialWindowOrigin.x + (initialWindowSize.width - newWidth)
-                newY = initialWindowOrigin.y + (initialWindowSize.height - newHeight)
-            default: break
-            }
-        } else {
-            // EDGES: free resize (stretches)
-            switch activeEdge {
-            case .right:
-                newWidth = max(minWidth, min(maxWidth, initialWindowSize.width + dx))
-            case .left:
-                newWidth = max(minWidth, min(maxWidth, initialWindowSize.width - dx))
-                newX = initialWindowOrigin.x + (initialWindowSize.width - newWidth)
-            case .top:
-                newHeight = max(minWidth / aspectRatio, initialWindowSize.height + dy)
-                newY = initialWindowOrigin.y // anchor bottom
-            case .bottom:
-                newHeight = max(minWidth / aspectRatio, initialWindowSize.height - dy)
-                newY = initialWindowOrigin.y + (initialWindowSize.height - newHeight)
-            default: break
-            }
-
-            // For edge resizes, don't force aspect ratio — let user stretch
-            if activeEdge == .left || activeEdge == .right {
-                newHeight = initialWindowSize.height // keep height
-            } else {
-                newWidth = initialWindowSize.width // keep width
-            }
-        }
-
-        let newFrame = NSRect(x: newX, y: newY, width: newWidth, height: newHeight)
-        window.setFrame(newFrame, display: true)
-
-        // Update image view to fill
-        imageView.frame = NSRect(x: 0, y: 0, width: newWidth, height: newHeight)
-        frame = NSRect(x: 0, y: 0, width: newWidth, height: newHeight)
+    private func applyFrame(_ rect: NSRect, to win: NSWindow) {
+        win.setFrame(rect, display: true)
+        updateLayout(rect.size)
     }
 
     override func mouseUp(with event: NSEvent) {
         if isLocked { return }
-        if let window = window {
-            // Notify for position/size saving
-            NotificationCenter.default.post(name: .desktopPhotoMoved, object: window)
+        guard let win = window else { return }
 
-            // Report new width for slider sync
-            if activeEdge != .none {
-                onResize?(window.frame.width)
-            }
+        // Save position
+        NotificationCenter.default.post(name: .desktopPhotoMoved, object: win)
+
+        // If we were resizing, report the new width
+        if dragMode != .move && dragMode != .none {
+            onResizeFinished?(win.frame.width)
         }
-        activeEdge = .none
-        NSCursor.arrow.set()
+        dragMode = .none
     }
 
-    override var acceptsFirstResponder: Bool { true }
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    // MARK: - Right-click menu
 
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        return bounds.contains(point) ? self : nil
+    override func rightMouseDown(with event: NSEvent) {
+        let menu = NSMenu()
+
+        let lockItem = NSMenuItem(
+            title: isLocked ? "Unlock Position" : "Lock Position",
+            action: #selector(handleLockToggle),
+            keyEquivalent: ""
+        )
+        lockItem.target = self
+        menu.addItem(lockItem)
+
+        menu.addItem(.separator())
+
+        let removeItem = NSMenuItem(
+            title: "Remove from Desktop",
+            action: #selector(handleRemove),
+            keyEquivalent: ""
+        )
+        removeItem.target = self
+        menu.addItem(removeItem)
+
+        NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
 
-    /// Flash a lock/unlock icon.
+    @objc private func handleLockToggle() { onLockToggle?() }
+    @objc private func handleRemove() { onRemove?() }
+
+    // MARK: - Lock flash
+
     func flashLockState(_ locked: Bool) {
         let size: CGFloat = 48
         let indicator = NSView(frame: NSRect(
@@ -323,24 +315,29 @@ class DraggablePhotoView: NSView {
         indicator.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.6).cgColor
         indicator.layer?.cornerRadius = 12
 
-        let symbol = NSImageView(frame: NSRect(x: 8, y: 8, width: 32, height: 32))
-        let config = NSImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        symbol.image = NSImage(
+        let sym = NSImageView(frame: NSRect(x: 8, y: 8, width: 32, height: 32))
+        sym.image = NSImage(
             systemSymbolName: locked ? "lock.fill" : "lock.open.fill",
             accessibilityDescription: nil
-        )?.withSymbolConfiguration(config)
-        symbol.contentTintColor = .white
-        indicator.addSubview(symbol)
+        )?.withSymbolConfiguration(.init(pointSize: 20, weight: .medium))
+        sym.contentTintColor = .white
+        indicator.addSubview(sym)
         addSubview(indicator)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.3
                 indicator.animator().alphaValue = 0
-            } completionHandler: {
-                indicator.removeFromSuperview()
-            }
+            } completionHandler: { indicator.removeFromSuperview() }
         }
+    }
+
+    // MARK: - Standard overrides
+
+    override var acceptsFirstResponder: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        bounds.contains(point) ? self : nil
     }
 }
 

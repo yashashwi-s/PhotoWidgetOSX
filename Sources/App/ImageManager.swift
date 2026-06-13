@@ -2,16 +2,14 @@ import AppKit
 import SwiftUI
 import ServiceManagement
 
-/// Manages multiple desktop photos, persistence, and app settings.
+/// Manages multiple desktop photos, persistence, and settings.
 @MainActor
 class PhotoManager: ObservableObject {
     @Published var photos: [PhotoItem] = []
     @Published var launchAtLogin: Bool = false
-    @Published var showMenuBarIcon: Bool = true
 
     private var windows: [UUID: DesktopPhotoWindow] = [:]
 
-    /// App Support directory for storing photos.
     private var storageDir: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dir = support.appendingPathComponent("PhotoWidget", isDirectory: true)
@@ -19,15 +17,12 @@ class PhotoManager: ObservableObject {
         return dir
     }
 
-    /// Where we persist the photo list.
     private var dataFile: URL { storageDir.appendingPathComponent("photos.json") }
 
     init() {
-        // Check current launch-at-login state
         launchAtLogin = SMAppService.mainApp.status == .enabled
-        showMenuBarIcon = UserDefaults.standard.object(forKey: "showMenuBarIcon") as? Bool ?? true
 
-        // Listen for window-move notifications
+        // Listen for window moves
         NotificationCenter.default.addObserver(
             forName: .desktopPhotoMoved,
             object: nil,
@@ -39,9 +34,24 @@ class PhotoManager: ObservableObject {
                 self?.saveWindowPosition(for: id, frame: window.frame)
             }
         }
+
+        // Save on quit
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.saveAllPositions()
+                self?.persist()
+            }
+        }
+
+        // Load saved photos immediately
+        loadSaved()
     }
 
-    // MARK: - Load & Save
+    // MARK: - Persistence
 
     func loadSaved() {
         guard let data = try? Data(contentsOf: dataFile),
@@ -51,30 +61,43 @@ class PhotoManager: ObservableObject {
         for item in photos where item.isVisible {
             let imageURL = storageDir.appendingPathComponent(item.filename)
             guard let image = NSImage(contentsOf: imageURL) else { continue }
-            showWindow(for: item, image: image)
+            createWindow(for: item, image: image)
         }
     }
 
     private func persist() {
-        let data = try? JSONEncoder().encode(photos)
-        try? data?.write(to: dataFile)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        guard let data = try? encoder.encode(photos) else { return }
+        try? data.write(to: dataFile, options: .atomic)
     }
 
-    // MARK: - Add / Remove Photos
+    private func saveAllPositions() {
+        for (id, window) in windows {
+            saveWindowPosition(for: id, frame: window.frame)
+        }
+    }
+
+    private func saveWindowPosition(for id: UUID, frame: NSRect) {
+        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
+        photos[index].frameString = NSStringFromRect(frame)
+        photos[index].widgetWidth = frame.width
+        persist()
+    }
+
+    // MARK: - Add / Remove
 
     func addPhoto(_ image: NSImage) {
-        // Save image to disk
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
         let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
         guard let jpegData = bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.9]) else { return }
 
         let filename = UUID().uuidString + ".jpg"
-        let fileURL = storageDir.appendingPathComponent(filename)
-        try? jpegData.write(to: fileURL)
+        try? jpegData.write(to: storageDir.appendingPathComponent(filename))
 
-        var item = PhotoItem(filename: filename)
+        let item = PhotoItem(filename: filename)
         photos.append(item)
-        showWindow(for: item, image: image)
+        createWindow(for: item, image: image)
         persist()
     }
 
@@ -82,49 +105,38 @@ class PhotoManager: ObservableObject {
         guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
         let item = photos[index]
 
-        // Remove window
         windows[id]?.hidePhoto()
         windows.removeValue(forKey: id)
 
-        // Remove file
-        let fileURL = storageDir.appendingPathComponent(item.filename)
-        try? FileManager.default.removeItem(at: fileURL)
-
+        try? FileManager.default.removeItem(at: storageDir.appendingPathComponent(item.filename))
         photos.remove(at: index)
         persist()
     }
 
     func removeAllPhotos() {
-        for id in Array(windows.keys) {
-            removePhoto(id)
-        }
+        let ids = photos.map { $0.id }
+        for id in ids { removePhoto(id) }
     }
 
-    // MARK: - Window Management
+    // MARK: - Window Creation
 
-    private func showWindow(for item: PhotoItem, image: NSImage) {
+    private func createWindow(for item: PhotoItem, image: NSImage) {
         let window = DesktopPhotoWindow()
         window.photoId = item.id
         window.showPhoto(image, baseWidth: item.widgetWidth, locked: item.isLocked)
 
-        // Restore position
+        // Restore saved position
         if !item.frameString.isEmpty {
             let rect = NSRectFromString(item.frameString)
-            if rect.width > 0 {
-                window.setFrameOrigin(rect.origin)
-            }
+            if rect.width > 0 { window.setFrameOrigin(rect.origin) }
         }
 
-        // Double-click toggles lock
-        window.onDoubleClick = { [weak self] in
-            self?.toggleLock(item.id)
-        }
-
-        // Sync slider when user resizes via drag handles
+        // Callbacks
+        window.onLockToggle = { [weak self] in self?.toggleLock(item.id) }
+        window.onRemove = { [weak self] in self?.removePhoto(item.id) }
         window.onResize = { [weak self] newWidth in
-            guard let self = self,
-                  let index = self.photos.firstIndex(where: { $0.id == item.id }) else { return }
-            self.photos[index].widgetWidth = newWidth
+            guard let self, let i = self.photos.firstIndex(where: { $0.id == item.id }) else { return }
+            self.photos[i].widgetWidth = newWidth
             self.persist()
         }
 
@@ -140,7 +152,6 @@ class PhotoManager: ObservableObject {
 
         windows[id]?.setLocked(locked)
         (windows[id]?.contentView as? DraggablePhotoView)?.flashLockState(locked)
-
         persist()
     }
 
@@ -150,15 +161,13 @@ class PhotoManager: ObservableObject {
 
         if photos[index].isVisible {
             let item = photos[index]
-            let imageURL = storageDir.appendingPathComponent(item.filename)
-            if let image = NSImage(contentsOf: imageURL) {
-                showWindow(for: item, image: image)
+            if let image = NSImage(contentsOf: storageDir.appendingPathComponent(item.filename)) {
+                createWindow(for: item, image: image)
             }
         } else {
             windows[id]?.hidePhoto()
             windows.removeValue(forKey: id)
         }
-
         persist()
     }
 
@@ -169,35 +178,40 @@ class PhotoManager: ObservableObject {
         persist()
     }
 
-    private func saveWindowPosition(for id: UUID, frame: NSRect) {
-        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
-        photos[index].frameString = NSStringFromRect(frame)
-        persist()
-    }
-
-    // MARK: - Settings
-
     func setLaunchAtLogin(_ enabled: Bool) {
         do {
-            if enabled {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
+            if enabled { try SMAppService.mainApp.register() }
+            else { try SMAppService.mainApp.unregister() }
             launchAtLogin = enabled
         } catch {
             print("Launch at login error: \(error)")
         }
     }
 
-    func setShowMenuBarIcon(_ show: Bool) {
-        showMenuBarIcon = show
-        UserDefaults.standard.set(show, forKey: "showMenuBarIcon")
+    /// Returns a small thumbnail for UI display.
+    func thumbnail(for item: PhotoItem, size: CGFloat = 48) -> NSImage? {
+        let url = storageDir.appendingPathComponent(item.filename)
+        guard let image = NSImage(contentsOf: url) else { return nil }
+        // Create a scaled-down version for efficiency
+        let thumb = NSImage(size: NSSize(width: size, height: size))
+        thumb.lockFocus()
+        let ar = image.size.width / image.size.height
+        let drawRect: NSRect
+        if ar > 1 {
+            let h = size / ar
+            drawRect = NSRect(x: 0, y: (size - h) / 2, width: size, height: h)
+        } else {
+            let w = size * ar
+            drawRect = NSRect(x: (size - w) / 2, y: 0, width: w, height: size)
+        }
+        image.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        thumb.unlockFocus()
+        return thumb
     }
 
-    /// Thumbnail of a photo for the UI.
-    func thumbnail(for item: PhotoItem) -> NSImage? {
-        let url = storageDir.appendingPathComponent(item.filename)
-        return NSImage(contentsOf: url)
+    /// Label for a photo (e.g. "Photo 1").
+    func label(for item: PhotoItem) -> String {
+        guard let index = photos.firstIndex(where: { $0.id == item.id }) else { return "Photo" }
+        return "Photo \(index + 1)"
     }
 }

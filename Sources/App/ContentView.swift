@@ -32,11 +32,23 @@ struct ContentView: View {
 
             Divider()
 
-            // Settings
-            settingsBar
-        }
-        .onAppear {
-            manager.loadSaved()
+            // Footer
+            HStack(spacing: 12) {
+                Toggle("Launch at Login", isOn: Binding(
+                    get: { manager.launchAtLogin },
+                    set: { manager.setLaunchAtLogin($0) }
+                ))
+                .toggleStyle(.checkbox)
+                .font(.system(size: 11))
+
+                Spacer()
+
+                Text("Double-click or right-click photo")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.quaternary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
     }
 
@@ -78,8 +90,12 @@ struct ContentView: View {
                 Image(nsImage: thumb)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            } else {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(.quaternary)
+                    .frame(width: 44, height: 44)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -94,47 +110,39 @@ struct ContentView: View {
                         .foregroundStyle(item.isVisible ? .primary : .secondary)
                 }
 
-                // Size slider
                 HStack(spacing: 4) {
-                    Text("Size")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
                     Slider(
                         value: Binding(
                             get: { item.widgetWidth },
                             set: { manager.resize(item.id, to: $0) }
                         ),
-                        in: 150...800, step: 10
+                        in: 80...800, step: 10
                     )
                     .controlSize(.mini)
+                    Text("\(Int(item.widgetWidth))")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 30, alignment: .trailing)
                 }
             }
 
-            Spacer()
-
             // Actions
-            HStack(spacing: 4) {
-                Button {
-                    manager.toggleVisibility(item.id)
-                } label: {
+            HStack(spacing: 2) {
+                Button { manager.toggleVisibility(item.id) } label: {
                     Image(systemName: item.isVisible ? "eye" : "eye.slash")
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.borderless)
                 .help(item.isVisible ? "Hide" : "Show")
 
-                Button {
-                    manager.toggleLock(item.id)
-                } label: {
+                Button { manager.toggleLock(item.id) } label: {
                     Image(systemName: item.isLocked ? "lock.fill" : "lock.open")
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.borderless)
-                .help(item.isLocked ? "Unlock" : "Lock position")
+                .help(item.isLocked ? "Unlock" : "Lock")
 
-                Button(role: .destructive) {
-                    manager.removePhoto(item.id)
-                } label: {
+                Button(role: .destructive) { manager.removePhoto(item.id) } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 11))
                 }
@@ -149,38 +157,13 @@ struct ContentView: View {
         )
     }
 
-    // MARK: - Settings
-
-    private var settingsBar: some View {
-        HStack(spacing: 12) {
-            Toggle("Launch at Login", isOn: Binding(
-                get: { manager.launchAtLogin },
-                set: { manager.setLaunchAtLogin($0) }
-            ))
-            .toggleStyle(.checkbox)
-            .font(.system(size: 11))
-
-            Spacer()
-
-            Text("Double-click photo to lock/unlock")
-                .font(.system(size: 10))
-                .foregroundStyle(.quaternary)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-
-    // MARK: - Actions
-
     private func pickFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.image, .png, .jpeg, .heic, .tiff]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.prompt = "Add"
-
         NSApp.activate(ignoringOtherApps: true)
-
         if panel.runModal() == .OK {
             for url in panel.urls {
                 if let img = NSImage(contentsOf: url) {
