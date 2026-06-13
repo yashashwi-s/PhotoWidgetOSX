@@ -19,6 +19,8 @@ Unlike Apple's built-in WidgetKit widgets (which lock you to 4 fixed sizes and c
 
 Or install via Homebrew:
 ```bash
+brew tap yashashwi-s/tap
+brew trust yashashwi-s/tap
 brew install --cask photo-widget-osx
 ```
 
