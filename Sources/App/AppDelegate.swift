@@ -2,9 +2,8 @@ import AppKit
 import SwiftUI
 
 /// AppDelegate manages the menu bar status item and the settings window.
-/// This gives us full control to hide/show the menu bar icon.
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem?
     var settingsWindow: NSWindow?
     let manager = PhotoManager()
@@ -36,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showStatusItem() {
-        if statusItem != nil { return }  // already showing
+        if statusItem != nil { return }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem?.button?.image = NSImage(systemSymbolName: "photo.on.rectangle", accessibilityDescription: "Photo Widget OSX")
@@ -44,6 +43,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem?.button?.image?.size = NSSize(width: 18, height: 18)
 
         UserDefaults.standard.set(false, forKey: "hideMenuBarIcon")
+
+        // Create the menu with a delegate so it rebuilds every time it opens
+        let menu = NSMenu()
+        menu.delegate = self
+        statusItem?.menu = menu
         rebuildMenu()
     }
 
@@ -53,15 +57,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(true, forKey: "hideMenuBarIcon")
     }
 
+    // MARK: - NSMenuDelegate — rebuild menu every time the user clicks the icon
+
+    nonisolated func menuNeedsUpdate(_ menu: NSMenu) {
+        Task { @MainActor in
+            self.rebuildMenu()
+        }
+    }
+
+    // MARK: - Build Menu
+
     func rebuildMenu() {
-        let menu = NSMenu()
+        guard let menu = statusItem?.menu else { return }
+        menu.removeAllItems()
 
         // Add Photo
         let addItem = NSMenuItem(title: "Add Photo…", action: #selector(addPhoto), keyEquivalent: "")
         addItem.target = self
         menu.addItem(addItem)
 
-        // Open Settings
+        // Add Folder
+        let addFolderItem = NSMenuItem(title: "Add Folder…", action: #selector(addFolder), keyEquivalent: "")
+        addFolderItem.target = self
+        menu.addItem(addFolderItem)
+
+        // Settings
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettingsFromMenu), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -69,10 +89,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !manager.photos.isEmpty {
             menu.addItem(.separator())
 
-            // Per-photo submenus with thumbnails
             for (index, item) in manager.photos.enumerated() {
                 let submenu = NSMenu()
 
+                // Float toggle
+                let floatItem = NSMenuItem(
+                    title: item.isFloating ? "Pin to Desktop" : "Float Above Windows",
+                    action: #selector(toggleFloating(_:)),
+                    keyEquivalent: ""
+                )
+                floatItem.target = self
+                floatItem.tag = index
+                submenu.addItem(floatItem)
+
+                // Click-through toggle
+                if item.isFloating {
+                    let clickThroughItem = NSMenuItem(
+                        title: item.isClickThrough ? "Disable Click-Through" : "Enable Click-Through",
+                        action: #selector(toggleClickThrough(_:)),
+                        keyEquivalent: ""
+                    )
+                    clickThroughItem.target = self
+                    clickThroughItem.tag = index
+                    submenu.addItem(clickThroughItem)
+                }
+
+                submenu.addItem(.separator())
+
+                // Visibility
                 let visItem = NSMenuItem(
                     title: item.isVisible ? "Hide" : "Show",
                     action: #selector(togglePhotoVisibility(_:)),
@@ -82,6 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 visItem.tag = index
                 submenu.addItem(visItem)
 
+                // Lock
                 let lockItem = NSMenuItem(
                     title: item.isLocked ? "Unlock Position" : "Lock Position",
                     action: #selector(togglePhotoLock(_:)),
@@ -93,11 +138,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 submenu.addItem(.separator())
 
-                let removeItem = NSMenuItem(
-                    title: "Remove",
-                    action: #selector(removePhotoMenu(_:)),
-                    keyEquivalent: ""
-                )
+                // Rename
+                let renameItem = NSMenuItem(title: "Rename…", action: #selector(renamePhoto(_:)), keyEquivalent: "")
+                renameItem.target = self
+                renameItem.tag = index
+                submenu.addItem(renameItem)
+
+                // Replace (only for single images)
+                if item.folderPath == nil {
+                    let replaceItem = NSMenuItem(title: "Replace Image…", action: #selector(replacePhoto(_:)), keyEquivalent: "")
+                    replaceItem.target = self
+                    replaceItem.tag = index
+                    submenu.addItem(replaceItem)
+                }
+
+                // Duplicate
+                let dupItem = NSMenuItem(title: "Duplicate", action: #selector(duplicatePhoto(_:)), keyEquivalent: "")
+                dupItem.target = self
+                dupItem.tag = index
+                submenu.addItem(dupItem)
+
+                // Folder navigation
+                if item.folderPath != nil {
+                    submenu.addItem(.separator())
+                    let count = manager.folderImageCount(item.id)
+                    let posLabel = NSMenuItem(title: "\(item.folderImageIndex + 1) of \(count) images", action: nil, keyEquivalent: "")
+                    posLabel.isEnabled = false
+                    submenu.addItem(posLabel)
+
+                    let prevItem = NSMenuItem(title: "← Previous", action: #selector(prevFolderImage(_:)), keyEquivalent: "")
+                    prevItem.target = self
+                    prevItem.tag = index
+                    submenu.addItem(prevItem)
+
+                    let nextItem = NSMenuItem(title: "Next →", action: #selector(nextFolderImage(_:)), keyEquivalent: "")
+                    nextItem.target = self
+                    nextItem.tag = index
+                    submenu.addItem(nextItem)
+                }
+
+                submenu.addItem(.separator())
+
+                let removeItem = NSMenuItem(title: "Remove", action: #selector(removePhotoMenu(_:)), keyEquivalent: "")
                 removeItem.target = self
                 removeItem.tag = index
                 submenu.addItem(removeItem)
@@ -106,19 +188,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let photoItem = NSMenuItem()
                 photoItem.submenu = submenu
 
-                // Create attributed title with thumbnail
-                let title = "Photo \(index + 1)"
+                let title = manager.label(for: item)
                 if let thumb = manager.thumbnail(for: item, size: 20) {
                     photoItem.image = thumb
                     photoItem.image?.size = NSSize(width: 20, height: 20)
                 }
-                photoItem.title = title
 
-                // Status indicators
-                var status = ""
-                if !item.isVisible { status += " — hidden" }
-                if item.isLocked { status += " — locked" }
-                if !status.isEmpty { photoItem.title = title + status } else { photoItem.title = title }
+                // Clean status badges
+                var badges: [String] = []
+                if !item.isVisible { badges.append("hidden") }
+                if item.isLocked { badges.append("locked") }
+                if item.isFloating { badges.append("floating") }
+                if item.folderPath != nil { badges.append("folder") }
+
+                photoItem.title = badges.isEmpty ? title : "\(title) — \(badges.joined(separator: ", "))"
 
                 menu.addItem(photoItem)
             }
@@ -148,8 +231,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let quitItem = NSMenuItem(title: "Quit Photo Widget", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-
-        statusItem?.menu = menu
     }
 
     // MARK: - Settings Window
@@ -170,13 +251,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         })
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 500),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 600),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Photo Widget OSX"
         window.center()
+        window.minSize = NSSize(width: 420, height: 400)
         window.contentView = NSHostingView(rootView: contentView)
         window.isReleasedWhenClosed = false
         window.makeKeyAndOrderFront(nil)
@@ -203,41 +285,117 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc func addFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Add Folder"
+        panel.message = "Choose a folder of images to display as a rotating widget"
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK, let url = panel.url {
+            manager.addFolder(url)
+            rebuildMenu()
+        }
+    }
+
     @objc func togglePhotoVisibility(_ sender: NSMenuItem) {
         let index = sender.tag
         guard index < manager.photos.count else { return }
         manager.toggleVisibility(manager.photos[index].id)
-        rebuildMenu()
     }
 
     @objc func togglePhotoLock(_ sender: NSMenuItem) {
         let index = sender.tag
         guard index < manager.photos.count else { return }
         manager.toggleLock(manager.photos[index].id)
-        rebuildMenu()
+    }
+
+    @objc func toggleFloating(_ sender: NSMenuItem) {
+        let index = sender.tag
+        guard index < manager.photos.count else { return }
+        manager.toggleFloating(manager.photos[index].id)
+    }
+
+    @objc func toggleClickThrough(_ sender: NSMenuItem) {
+        let index = sender.tag
+        guard index < manager.photos.count else { return }
+        manager.toggleClickThrough(manager.photos[index].id)
+    }
+
+    @objc func renamePhoto(_ sender: NSMenuItem) {
+        let index = sender.tag
+        guard index < manager.photos.count else { return }
+        let item = manager.photos[index]
+
+        let alert = NSAlert()
+        alert.messageText = "Rename Photo"
+        alert.informativeText = "Enter a new name for this photo widget."
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        textField.stringValue = manager.label(for: item)
+        textField.isEditable = true
+        textField.isBezeled = true
+        textField.bezelStyle = .roundedBezel
+        alert.accessoryView = textField
+
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            manager.renamePhoto(item.id, to: textField.stringValue)
+        }
+    }
+
+    @objc func replacePhoto(_ sender: NSMenuItem) {
+        let index = sender.tag
+        guard index < manager.photos.count else { return }
+
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image, .png, .jpeg, .heic, .tiff]
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Replace"
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK, let url = panel.url, let img = NSImage(contentsOf: url) {
+            manager.replacePhoto(manager.photos[index].id, with: img)
+        }
+    }
+
+    @objc func duplicatePhoto(_ sender: NSMenuItem) {
+        let index = sender.tag
+        guard index < manager.photos.count else { return }
+        manager.duplicatePhoto(manager.photos[index].id)
+    }
+
+    @objc func nextFolderImage(_ sender: NSMenuItem) {
+        let index = sender.tag
+        guard index < manager.photos.count else { return }
+        manager.nextFolderImage(manager.photos[index].id)
+    }
+
+    @objc func prevFolderImage(_ sender: NSMenuItem) {
+        let index = sender.tag
+        guard index < manager.photos.count else { return }
+        manager.prevFolderImage(manager.photos[index].id)
     }
 
     @objc func removePhotoMenu(_ sender: NSMenuItem) {
         let index = sender.tag
         guard index < manager.photos.count else { return }
         manager.removePhoto(manager.photos[index].id)
-        rebuildMenu()
     }
 
     @objc func removeAllPhotos() {
         manager.removeAllPhotos()
-        rebuildMenu()
     }
 
     @objc func toggleLaunchAtLogin(_ sender: NSMenuItem) {
         let newState = sender.state == .off
         manager.setLaunchAtLogin(newState)
-        rebuildMenu()
     }
 
     @objc func hideMenuBarIcon() {
         hideStatusItem()
-        // Show a brief alert so user knows how to get it back
         let alert = NSAlert()
         alert.messageText = "Menu Bar Icon Hidden"
         alert.informativeText = "To bring it back, just open Photo Widget again from your Applications folder or Spotlight."

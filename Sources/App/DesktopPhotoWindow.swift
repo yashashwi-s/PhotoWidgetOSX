@@ -7,6 +7,14 @@ class DesktopPhotoWindow: NSWindow {
     var onLockToggle: (() -> Void)?
     var onRemove: (() -> Void)?
     var onResize: ((CGFloat) -> Void)?
+    var onOpacityChanged: ((CGFloat) -> Void)?
+    var onClickAdvance: (() -> Void)?
+
+    private var flagsMonitor: Any?
+    private var isClickThroughActive = false
+
+    private static let desktopLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
+    private static let floatingLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.floatingWindow)) + 1)
 
     init() {
         super.init(
@@ -16,7 +24,7 @@ class DesktopPhotoWindow: NSWindow {
             defer: false
         )
 
-        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
+        level = Self.desktopLevel
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
@@ -28,7 +36,7 @@ class DesktopPhotoWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
-    func showPhoto(_ image: NSImage, baseWidth: CGFloat = 300, locked: Bool = false) {
+    func showPhoto(_ image: NSImage, baseWidth: CGFloat = 300, locked: Bool = false, settings: PhotoItem? = nil) {
         let imageSize = image.size
         guard imageSize.width > 0, imageSize.height > 0 else { return }
 
@@ -39,18 +47,32 @@ class DesktopPhotoWindow: NSWindow {
         let container = DraggablePhotoView(
             frame: NSRect(x: 0, y: 0, width: w, height: h),
             image: image,
-            locked: locked
+            locked: locked,
+            settings: settings
         )
         container.onLockToggle = { [weak self] in self?.onLockToggle?() }
         container.onRemove = { [weak self] in self?.onRemove?() }
         container.onResizeFinished = { [weak self] newWidth in self?.onResize?(newWidth) }
+        container.onOpacityChanged = { [weak self] newOpacity in self?.onOpacityChanged?(newOpacity) }
 
         contentView = container
         setContentSize(NSSize(width: w, height: h))
+
+        // Apply settings
+        if let s = settings {
+            setFloating(s.isFloating)
+            setClickThrough(s.isClickThrough)
+            setPhotoOpacity(s.opacity)
+            applyShadowSettings(enabled: s.shadowEnabled, blur: s.shadowBlur, opacity: s.shadowOpacity)
+        }
+
         makeKeyAndOrderFront(nil)
     }
 
-    func hidePhoto() { orderOut(nil) }
+    func hidePhoto() {
+        teardownFlagsMonitor()
+        orderOut(nil)
+    }
 
     func setLocked(_ locked: Bool) {
         (contentView as? DraggablePhotoView)?.isLocked = locked
@@ -64,6 +86,110 @@ class DesktopPhotoWindow: NSWindow {
         let newFrame = NSRect(x: frame.origin.x, y: frame.origin.y, width: width, height: h)
         setFrame(newFrame, display: true, animate: true)
         container.updateLayout(NSSize(width: width, height: h))
+    }
+
+    // MARK: - v1.1 Floating Mode
+
+    func setFloating(_ floating: Bool) {
+        level = floating ? Self.floatingLevel : Self.desktopLevel
+        // Floating windows shouldn't hide on deactivate
+        hidesOnDeactivate = false
+    }
+
+    func setClickThrough(_ enabled: Bool) {
+        isClickThroughActive = enabled
+        ignoresMouseEvents = enabled
+
+        if enabled {
+            setupFlagsMonitor()
+        } else {
+            teardownFlagsMonitor()
+        }
+    }
+
+    func setPhotoOpacity(_ value: CGFloat) {
+        contentView?.alphaValue = max(0.1, min(1.0, value))
+    }
+
+    // MARK: - v1.3 Shadow
+
+    func applyShadowSettings(enabled: Bool, blur: CGFloat, opacity: CGFloat) {
+        hasShadow = enabled
+        if enabled, let container = contentView as? DraggablePhotoView {
+            container.shadow = NSShadow()
+            container.shadow?.shadowColor = NSColor.black.withAlphaComponent(opacity)
+            container.shadow?.shadowOffset = NSSize(width: 0, height: -2)
+            container.shadow?.shadowBlurRadius = blur
+        } else {
+            (contentView as? DraggablePhotoView)?.shadow = nil
+        }
+    }
+
+    // MARK: - Modifier Key Monitor (Option key overrides click-through)
+
+    private func setupFlagsMonitor() {
+        teardownFlagsMonitor()
+        flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handleFlagsChanged(event)
+            return event
+        }
+    }
+
+    private func teardownFlagsMonitor() {
+        if let monitor = flagsMonitor {
+            NSEvent.removeMonitor(monitor)
+            flagsMonitor = nil
+        }
+    }
+
+    private func handleFlagsChanged(_ event: NSEvent) {
+        guard isClickThroughActive else { return }
+        let optionDown = event.modifierFlags.contains(.option)
+        ignoresMouseEvents = !optionDown
+    }
+
+    // MARK: - Smooth image swap (CATransition crossfade + frame animation)
+
+    func swapImage(_ newImage: NSImage, targetFrame: NSRect? = nil, animate: Bool = true) {
+        guard let container = contentView as? DraggablePhotoView else { return }
+        let newAR = newImage.size.width / newImage.size.height
+        container.aspectRatio = newAR
+
+        // Determine target frame
+        let newFrame: NSRect
+        if let target = targetFrame, target.width > 0 {
+            newFrame = target
+        } else {
+            // Keep current width, adjust height for new aspect ratio. Pin top-left.
+            let newH = frame.width / newAR
+            let newOriginY = frame.origin.y + frame.height - newH
+            newFrame = NSRect(x: frame.origin.x, y: newOriginY, width: frame.width, height: newH)
+        }
+
+        if animate {
+            // GPU-accelerated crossfade via Core Animation
+            let transition = CATransition()
+            transition.type = .fade
+            transition.duration = 0.35
+            transition.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            container.imageView.layer?.add(transition, forKey: kCATransition)
+        }
+
+        // Set the new image (the CATransition handles the crossfade)
+        container.imageView.image = newImage
+
+        if animate {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.35
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                self.animator().setFrame(newFrame, display: true)
+            } completionHandler: {
+                container.updateLayout(newFrame.size)
+            }
+        } else {
+            setFrame(newFrame, display: true)
+            container.updateLayout(newFrame.size)
+        }
     }
 }
 
@@ -85,34 +211,56 @@ class DraggablePhotoView: NSView {
     var onLockToggle: (() -> Void)?
     var onRemove: (() -> Void)?
     var onResizeFinished: ((CGFloat) -> Void)?
+    var onOpacityChanged: ((CGFloat) -> Void)?
+    var onClickAdvance: (() -> Void)?
 
     private var dragMode: DragMode = .none
     private var initialMouse: NSPoint = .zero
     private var anchorPoint: NSPoint = .zero   // the fixed corner (screen coords)
-    private var aspectRatio: CGFloat = 1.0
+    var aspectRatio: CGFloat = 1.0
     private let handleZone: CGFloat = 12
     private let minSize: CGFloat = 80
 
-    init(frame: NSRect, image: NSImage, locked: Bool) {
+    // v1.3 — Aesthetic layers
+    private var borderLayer: CAShapeLayer?
+    private var vignetteLayer: CAGradientLayer?
+
+    init(frame: NSRect, image: NSImage, locked: Bool, settings: PhotoItem? = nil) {
         imageView = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
         imageView.image = image
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.wantsLayer = true
-        imageView.layer?.cornerRadius = 16
+
+        let cr = settings?.cornerRadius ?? 16
+        imageView.layer?.cornerRadius = min(cr, min(frame.width, frame.height) * 0.3)
         imageView.layer?.masksToBounds = true
         imageView.layer?.cornerCurve = .continuous
+
         self.isLocked = locked
         self.aspectRatio = image.size.width / image.size.height
 
         super.init(frame: frame)
 
         wantsLayer = true
-        shadow = NSShadow()
-        shadow?.shadowColor = NSColor.black.withAlphaComponent(0.3)
-        shadow?.shadowOffset = NSSize(width: 0, height: -2)
-        shadow?.shadowBlurRadius = 10
+        let shadowEnabled = settings?.shadowEnabled ?? true
+        if shadowEnabled {
+            shadow = NSShadow()
+            shadow?.shadowColor = NSColor.black.withAlphaComponent(settings?.shadowOpacity ?? 0.3)
+            shadow?.shadowOffset = NSSize(width: 0, height: -2)
+            shadow?.shadowBlurRadius = settings?.shadowBlur ?? 10
+        }
 
         addSubview(imageView)
+
+        // Apply border
+        if let s = settings, s.borderWidth > 0 {
+            applyBorder(width: s.borderWidth, color: s.borderColor)
+        }
+
+        // Apply vignette
+        if settings?.vignetteEnabled == true {
+            applyVignette()
+        }
 
         addTrackingArea(NSTrackingArea(
             rect: .zero,
@@ -126,8 +274,96 @@ class DraggablePhotoView: NSView {
     func updateLayout(_ size: NSSize) {
         frame = NSRect(origin: .zero, size: size)
         imageView.frame = bounds
-        // Keep corner radius reasonable
-        imageView.layer?.cornerRadius = min(16, min(size.width, size.height) * 0.08)
+
+        // Recalculate corner radius relative to size
+        let maxRadius = min(size.width, size.height) * 0.3
+        let currentRadius = imageView.layer?.cornerRadius ?? 16
+        imageView.layer?.cornerRadius = min(currentRadius, maxRadius)
+
+        // Update border path
+        if let bl = borderLayer {
+            bl.frame = bounds
+            bl.path = CGPath(
+                roundedRect: bounds.insetBy(dx: bl.lineWidth / 2, dy: bl.lineWidth / 2),
+                cornerWidth: imageView.layer?.cornerRadius ?? 16,
+                cornerHeight: imageView.layer?.cornerRadius ?? 16,
+                transform: nil
+            )
+        }
+
+        // Update vignette
+        vignetteLayer?.frame = bounds
+    }
+
+    // MARK: - v1.3 Aesthetic Controls
+
+    func setCornerRadius(_ radius: CGFloat) {
+        let maxRadius = min(bounds.width, bounds.height) * 0.3
+        let clamped = min(radius, maxRadius)
+        imageView.layer?.cornerRadius = clamped
+
+        // Update border path if present
+        if let bl = borderLayer {
+            bl.path = CGPath(
+                roundedRect: bounds.insetBy(dx: bl.lineWidth / 2, dy: bl.lineWidth / 2),
+                cornerWidth: clamped,
+                cornerHeight: clamped,
+                transform: nil
+            )
+        }
+    }
+
+    func applyBorder(width: CGFloat, color: NSColor) {
+        borderLayer?.removeFromSuperlayer()
+
+        guard width > 0 else {
+            borderLayer = nil
+            return
+        }
+
+        let cr = imageView.layer?.cornerRadius ?? 16
+        let shape = CAShapeLayer()
+        shape.frame = bounds
+        shape.path = CGPath(
+            roundedRect: bounds.insetBy(dx: width / 2, dy: width / 2),
+            cornerWidth: cr,
+            cornerHeight: cr,
+            transform: nil
+        )
+        shape.fillColor = nil
+        shape.strokeColor = color.cgColor
+        shape.lineWidth = width
+        layer?.addSublayer(shape)
+        borderLayer = shape
+    }
+
+    func applyVignette() {
+        vignetteLayer?.removeFromSuperlayer()
+
+        let gradient = CAGradientLayer()
+        gradient.frame = bounds
+        gradient.type = .radial
+        gradient.colors = [
+            NSColor.clear.cgColor,
+            NSColor.black.withAlphaComponent(0.4).cgColor
+        ]
+        gradient.locations = [0.5, 1.0]
+        gradient.startPoint = CGPoint(x: 0.5, y: 0.5)
+        gradient.endPoint = CGPoint(x: 1.0, y: 1.0)
+        gradient.cornerRadius = imageView.layer?.cornerRadius ?? 16
+
+        // Insert above image but below border
+        if let bl = borderLayer {
+            layer?.insertSublayer(gradient, below: bl)
+        } else {
+            layer?.addSublayer(gradient)
+        }
+        vignetteLayer = gradient
+    }
+
+    func removeVignette() {
+        vignetteLayer?.removeFromSuperlayer()
+        vignetteLayer = nil
     }
 
     // MARK: - Hit zones
@@ -171,7 +407,17 @@ class DraggablePhotoView: NSView {
     // MARK: - Mouse events
 
     override func mouseDown(with event: NSEvent) {
-        if isLocked { return }
+        if isLocked {
+            // Even when locked, double-click advances folder images
+            if event.clickCount == 2 { onClickAdvance?() }
+            return
+        }
+
+        // Double-click advances folder images
+        if event.clickCount == 2 {
+            onClickAdvance?()
+            return
+        }
 
         guard let win = window else { return }
         let p = convert(event.locationInWindow, from: nil)
@@ -207,17 +453,14 @@ class DraggablePhotoView: NSView {
             initialMouse = mouse
 
         case .resizeBottomRight:
-            // Anchor = top-left. Dragged corner = bottom-right.
-            // In macOS coords: anchor is (minX, maxY) → top-left
             let desiredW = max(minSize, mouse.x - anchorPoint.x)
             let newW = desiredW
             let newH = newW / aspectRatio
             let newX = anchorPoint.x
-            let newY = anchorPoint.y - newH  // top-left stays, bottom moves
+            let newY = anchorPoint.y - newH
             applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
 
         case .resizeBottomLeft:
-            // Anchor = top-right
             let desiredW = max(minSize, anchorPoint.x - mouse.x)
             let newW = desiredW
             let newH = newW / aspectRatio
@@ -226,21 +469,19 @@ class DraggablePhotoView: NSView {
             applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
 
         case .resizeTopRight:
-            // Anchor = bottom-left
             let desiredW = max(minSize, mouse.x - anchorPoint.x)
             let newW = desiredW
             let newH = newW / aspectRatio
             let newX = anchorPoint.x
-            let newY = anchorPoint.y  // bottom stays
+            let newY = anchorPoint.y
             applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
 
         case .resizeTopLeft:
-            // Anchor = bottom-right
             let desiredW = max(minSize, anchorPoint.x - mouse.x)
             let newW = desiredW
             let newH = newW / aspectRatio
             let newX = anchorPoint.x - newW
-            let newY = anchorPoint.y  // bottom stays
+            let newY = anchorPoint.y
             applyFrame(NSRect(x: newX, y: newY, width: newW, height: newH), to: win)
 
         case .none:
@@ -265,6 +506,17 @@ class DraggablePhotoView: NSView {
             onResizeFinished?(win.frame.width)
         }
         dragMode = .none
+    }
+
+    // MARK: - Scroll wheel → opacity
+
+    override func scrollWheel(with event: NSEvent) {
+        guard !isLocked else { return }
+        let delta = event.deltaY * 0.02
+        guard let currentAlpha = window?.contentView?.alphaValue else { return }
+        let newAlpha = max(0.1, min(1.0, currentAlpha + delta))
+        window?.contentView?.alphaValue = newAlpha
+        onOpacityChanged?(newAlpha)
     }
 
     // MARK: - Right-click menu

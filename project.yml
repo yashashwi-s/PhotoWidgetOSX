@@ -28,9 +28,13 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "Photo Widget OSX"
         GENERATE_INFOPLIST_FILE: YES
         CURRENT_PROJECT_VERSION: 1
-        MARKETING_VERSION: 1.0.0
+        MARKETING_VERSION: 1.1.0
         INFOPLIST_KEY_LSUIElement: true
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Photo Widget OSX needs access to your Photos library so you can pick images to display on your desktop."
+        INFOPLIST_KEY_NSDesktopFolderUsageDescription: "Photo Widget OSX needs access to your Desktop to place photo widgets."
+        INFOPLIST_KEY_NSDocumentsFolderUsageDescription: "Photo Widget OSX needs access to your folders to load images."
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_ENTITLEMENTS: Sources/App/PhotoWidgetOSX.entitlements
         DEVELOPMENT_TEAM: ""
