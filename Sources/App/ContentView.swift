@@ -28,7 +28,7 @@ struct ContentView: View {
 
     private var headerBar: some View {
         HStack(spacing: 8) {
-            Text("Photo Widget OSX")
+            Text(Constants.appName)
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
 
             Spacer()
@@ -202,40 +202,42 @@ struct PhotoRowView: View {
             // MARK: Header
             HStack(spacing: 0) {
                 // Left: entire area expands/collapses
-                HStack(spacing: 10) {
-                    // Chevron
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        .animation(.easeInOut(duration: 0.15), value: isExpanded)
-                        .frame(width: 8)
-
-                    // Thumbnail
-                    thumbnailView
-
-                    // Labels
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Text(manager.label(for: item))
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(item.isVisible ? .primary : .secondary)
-                                .lineLimit(1)
-                            badges
-                        }
-                        Text(collapsedStatus)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    Spacer(minLength: 8)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
+                Button {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         isExpanded.toggle()
                     }
+                } label: {
+                    HStack(spacing: 10) {
+                        // Chevron
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .animation(.easeInOut(duration: 0.15), value: isExpanded)
+                            .frame(width: 8)
+
+                        // Thumbnail
+                        thumbnailView
+
+                        // Labels
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 4) {
+                                Text(manager.label(for: item))
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(item.isVisible ? .primary : .secondary)
+                                    .lineLimit(1)
+                                badges
+                            }
+                            Text(collapsedStatus)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        Spacer(minLength: 8)
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
 
                 // Right: action buttons
                 HStack(spacing: 6) {
@@ -273,6 +275,11 @@ struct PhotoRowView: View {
             }
         }
         .background(rowBackground)
+        .contextMenu {
+            Button("Reveal in Finder") {
+                revealInFinder()
+            }
+        }
         .onHover { isHovering = $0 }
     }
 
@@ -364,7 +371,7 @@ struct PhotoRowView: View {
             settingsGroup("MODE") {
                 compactToggle("Float Above Windows", isOn: Binding(
                     get: { item.isFloating },
-                    set: { _ in manager.toggleFloating(item.id); onMenuUpdate?() }
+                    set: { manager.setFloating(item.id, $0); onMenuUpdate?() }
                 ))
 
                 if item.isFloating {
@@ -460,6 +467,22 @@ struct PhotoRowView: View {
     private var folderControls: some View {
         let count = manager.folderImageCount(item.id)
 
+        // Sizing Mode
+        HStack(spacing: 6) {
+            Text("Mode")
+                .font(.system(size: 11))
+                .frame(width: 48, alignment: .leading)
+            Picker("", selection: Binding(
+                get: { item.folderSizeMode },
+                set: { manager.setFolderSizeMode(item.id, $0) }
+            )) {
+                Text("Dynamic").tag("dynamic")
+                Text("Fixed Frame").tag("fixed")
+            }
+            .pickerStyle(.segmented)
+            .controlSize(.small)
+        }
+
         // Navigation
         HStack {
             Text("Image")
@@ -520,7 +543,11 @@ struct PhotoRowView: View {
         // Info
         VStack(alignment: .leading, spacing: 3) {
             hintText("Double-click the photo on your desktop to go to next image")
-            hintText("Each image remembers its own position and size")
+            if item.folderSizeMode == "dynamic" {
+                hintText("Dynamic: Images resize without cropping. Each photo remembers its size.")
+            } else {
+                hintText("Fixed Frame: Widget stays fixed. Images scale and crop to fill the frame.")
+            }
         }
         .padding(.top, 2)
     }
@@ -617,5 +644,14 @@ struct PhotoRowView: View {
         Text(text)
             .font(.system(size: 10))
             .foregroundStyle(.quaternary)
+    }
+
+    private func revealInFinder() {
+        if let path = item.folderPath {
+            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: path)
+        } else {
+            let url = manager.storageDir.appendingPathComponent(item.filename)
+            NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+        }
     }
 }

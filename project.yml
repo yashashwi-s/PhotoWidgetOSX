@@ -1,4 +1,4 @@
-name: PhotoWidgetOSX
+name: Tableau
 options:
   bundleIdPrefix: com.yashashwi
   deploymentTarget:
@@ -13,7 +13,7 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 targets:
-  PhotoWidgetOSX:
+  Tableau:
     type: application
     platform: macOS
     sources:
@@ -22,17 +22,17 @@ targets:
           - "*.entitlements"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashashwi.photowidgetosx
-        PRODUCT_NAME: "Photo Widget OSX"
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashashwi.tableau
+        PRODUCT_NAME: "Tableau"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.photography"
-        INFOPLIST_KEY_CFBundleDisplayName: "Photo Widget OSX"
+        INFOPLIST_KEY_CFBundleDisplayName: "Tableau"
         GENERATE_INFOPLIST_FILE: YES
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: 1.1.0
         INFOPLIST_KEY_LSUIElement: true
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Photo Widget OSX needs access to your Photos library so you can pick images to display on your desktop."
-        INFOPLIST_KEY_NSDesktopFolderUsageDescription: "Photo Widget OSX needs access to your Desktop to place photo widgets."
-        INFOPLIST_KEY_NSDocumentsFolderUsageDescription: "Photo Widget OSX needs access to your folders to load images."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Tableau needs access to your Photos library so you can pick images to display on your desktop."
+        INFOPLIST_KEY_NSDesktopFolderUsageDescription: "Tableau needs access to your Desktop to place photo widgets."
+        INFOPLIST_KEY_NSDocumentsFolderUsageDescription: "Tableau needs access to your folders to load images."
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"

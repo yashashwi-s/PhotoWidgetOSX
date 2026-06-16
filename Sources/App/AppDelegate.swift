@@ -38,8 +38,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if statusItem != nil { return }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem?.button?.image = NSImage(systemSymbolName: "photo.on.rectangle", accessibilityDescription: "Photo Widget OSX")
-        statusItem?.button?.toolTip = "Photo Widget OSX"
+        statusItem?.autosaveName = "TableauStatusItem"
+        statusItem?.button?.image = NSImage(systemSymbolName: "photo.on.rectangle", accessibilityDescription: Constants.appName)
+        statusItem?.button?.toolTip = Constants.appName
         statusItem?.button?.image?.size = NSSize(width: 18, height: 18)
 
         UserDefaults.standard.set(false, forKey: "hideMenuBarIcon")
@@ -228,7 +229,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "Quit Photo Widget", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit \(Constants.appName)", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
     }
@@ -256,7 +257,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Photo Widget OSX"
+        window.title = Constants.appName
         window.center()
         window.minSize = NSSize(width: 420, height: 400)
         window.contentView = NSHostingView(rootView: contentView)
@@ -314,7 +315,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func toggleFloating(_ sender: NSMenuItem) {
         let index = sender.tag
         guard index < manager.photos.count else { return }
-        manager.toggleFloating(manager.photos[index].id)
+        let current = manager.photos[index].isFloating
+        manager.setFloating(manager.photos[index].id, !current)
     }
 
     @objc func toggleClickThrough(_ sender: NSMenuItem) {
@@ -330,7 +332,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let alert = NSAlert()
         alert.messageText = "Rename Photo"
-        alert.informativeText = "Enter a new name for this photo widget."
+        alert.informativeText = "Enter a new name for this widget."
         alert.addButton(withTitle: "Rename")
         alert.addButton(withTitle: "Cancel")
 
@@ -398,7 +400,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         hideStatusItem()
         let alert = NSAlert()
         alert.messageText = "Menu Bar Icon Hidden"
-        alert.informativeText = "To bring it back, just open Photo Widget again from your Applications folder or Spotlight."
+        alert.informativeText = "To bring it back, just open \(Constants.appName) again from your Applications folder or Spotlight."
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()

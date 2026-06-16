@@ -40,6 +40,7 @@ struct PhotoItem: Identifiable, Codable {
 
     // v1.4 — Smart Canvas
     var folderPath: String?
+    var folderSizeMode: String         // "dynamic" or "fixed"
     var rotationInterval: String       // "click", "30s", "5m", "hourly", "daily", "custom"
     var folderImageIndex: Int
     var customRotationSeconds: Int     // used when rotationInterval == "custom"
@@ -72,6 +73,7 @@ struct PhotoItem: Identifiable, Codable {
 
         // v1.4 defaults
         self.folderPath = nil
+        self.folderSizeMode = "dynamic"
         self.rotationInterval = "click"
         self.folderImageIndex = 0
         self.customRotationSeconds = 60
@@ -86,7 +88,7 @@ struct PhotoItem: Identifiable, Codable {
         case customName
         case cornerRadius, shadowEnabled, shadowBlur, shadowOpacity
         case borderWidth, borderColorHex, vignetteEnabled
-        case folderPath, rotationInterval, folderImageIndex
+        case folderPath, folderSizeMode, rotationInterval, folderImageIndex
         case customRotationSeconds, folderImageConfigs
     }
 
@@ -114,6 +116,7 @@ struct PhotoItem: Identifiable, Codable {
         vignetteEnabled = try c.decodeIfPresent(Bool.self, forKey: .vignetteEnabled) ?? false
 
         folderPath = try c.decodeIfPresent(String.self, forKey: .folderPath)
+        folderSizeMode = try c.decodeIfPresent(String.self, forKey: .folderSizeMode) ?? "dynamic"
         rotationInterval = try c.decodeIfPresent(String.self, forKey: .rotationInterval) ?? "click"
         folderImageIndex = try c.decodeIfPresent(Int.self, forKey: .folderImageIndex) ?? 0
         customRotationSeconds = try c.decodeIfPresent(Int.self, forKey: .customRotationSeconds) ?? 60

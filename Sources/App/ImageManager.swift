@@ -15,7 +15,7 @@ class PhotoManager: ObservableObject {
     private var folderImages: [UUID: [URL]] = [:]
     private var rotationTimers: [UUID: DispatchSourceTimer] = [:]
 
-    private var storageDir: URL {
+    var storageDir: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dir = support.appendingPathComponent("PhotoWidget", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -107,8 +107,9 @@ class PhotoManager: ObservableObject {
         photos[index].frameString = NSStringFromRect(frame)
         photos[index].widgetWidth = frame.width
 
-        // Also save per-image config for folder photos
+        // Also save per-image config for folder photos if in dynamic mode
         if photos[index].folderPath != nil,
+           photos[index].folderSizeMode == "dynamic",
            let images = folderImages[id] {
             let currentImage = images[safe: photos[index].folderImageIndex]
             if let key = currentImage?.lastPathComponent {
@@ -208,9 +209,20 @@ class PhotoManager: ObservableObject {
         window.showPhoto(image, baseWidth: item.widgetWidth, locked: item.isLocked, settings: item)
 
         // Restore saved position
-        if !item.frameString.isEmpty {
-            let rect = NSRectFromString(item.frameString)
-            if rect.width > 0 { window.setFrameOrigin(rect.origin) }
+        var targetFrame: NSRect? = nil
+        if item.folderSizeMode == "dynamic", item.folderPath != nil, let images = folderImages[item.id] {
+            let currentImage = images[safe: item.folderImageIndex]
+            if let key = currentImage?.lastPathComponent, let cfg = item.folderImageConfigs[key] {
+                targetFrame = NSRectFromString(cfg.frameString)
+            }
+        }
+        
+        let fallbackRect = NSRectFromString(item.frameString)
+        let rectToUse = targetFrame ?? fallbackRect
+        
+        if rectToUse.width > 0 { 
+            window.setFrame(rectToUse, display: true) 
+            (window.contentView as? DraggablePhotoView)?.updateLayout(rectToUse.size)
         }
 
         // Callbacks
@@ -244,10 +256,16 @@ class PhotoManager: ObservableObject {
 
     // MARK: - v1.1 Controls
 
-    func toggleFloating(_ id: UUID) {
+    func setFloating(_ id: UUID, _ floating: Bool) {
         guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
-        photos[index].isFloating.toggle()
-        windows[id]?.setFloating(photos[index].isFloating)
+        photos[index].isFloating = floating
+        windows[id]?.setFloating(floating)
+        
+        if !floating {
+            photos[index].isClickThrough = false
+            windows[id]?.setClickThrough(false)
+        }
+        
         persist()
     }
 
@@ -497,18 +515,20 @@ class PhotoManager: ObservableObject {
         guard let index = photos.firstIndex(where: { $0.id == id }),
               let images = folderImages[id], !images.isEmpty else { return }
 
-        // Save current image's position/size
-        saveFolderImageConfig(for: id)
+        let item = photos[index]
+
+        if item.folderSizeMode == "dynamic" {
+            saveFolderImageConfig(for: id)
+        }
 
         // Advance
         photos[index].folderImageIndex = (photos[index].folderImageIndex + 1) % images.count
         let imageURL = images[photos[index].folderImageIndex]
 
         if let image = NSImage(contentsOf: imageURL) {
-            // Get saved frame for the new image, if any
             let key = imageURL.lastPathComponent
-            let targetFrame = photos[index].folderImageConfigs[key].map { NSRectFromString($0.frameString) }
-            windows[id]?.swapImage(image, targetFrame: targetFrame, animate: true)
+            let targetFrame = item.folderImageConfigs[key].map { NSRectFromString($0.frameString) }
+            windows[id]?.swapImage(image, targetFrame: targetFrame, mode: item.folderSizeMode, animate: true)
         }
         persist()
     }
@@ -517,8 +537,11 @@ class PhotoManager: ObservableObject {
         guard let index = photos.firstIndex(where: { $0.id == id }),
               let images = folderImages[id], !images.isEmpty else { return }
 
-        // Save current image's position/size
-        saveFolderImageConfig(for: id)
+        let item = photos[index]
+
+        if item.folderSizeMode == "dynamic" {
+            saveFolderImageConfig(for: id)
+        }
 
         // Go back
         let currentIndex = photos[index].folderImageIndex
@@ -527,8 +550,8 @@ class PhotoManager: ObservableObject {
 
         if let image = NSImage(contentsOf: imageURL) {
             let key = imageURL.lastPathComponent
-            let targetFrame = photos[index].folderImageConfigs[key].map { NSRectFromString($0.frameString) }
-            windows[id]?.swapImage(image, targetFrame: targetFrame, animate: true)
+            let targetFrame = item.folderImageConfigs[key].map { NSRectFromString($0.frameString) }
+            windows[id]?.swapImage(image, targetFrame: targetFrame, mode: item.folderSizeMode, animate: true)
         }
         persist()
     }
@@ -550,6 +573,31 @@ class PhotoManager: ObservableObject {
             rotationTimers[id]?.cancel()
             rotationTimers.removeValue(forKey: id)
             setupRotationTimer(for: photos[index])
+        }
+        persist()
+    }
+
+    func setFolderSizeMode(_ id: UUID, _ mode: String) {
+        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
+        let oldMode = photos[index].folderSizeMode
+        photos[index].folderSizeMode = mode
+
+        if oldMode == "dynamic" && mode == "fixed" {
+            // We just switched to fixed. Update the frameString to current frame so all images use it.
+            if let window = windows[id] {
+                photos[index].frameString = NSStringFromRect(window.frame)
+                photos[index].widgetWidth = window.frame.width
+            }
+        }
+
+        // Trigger an immediate swap so the window resizes or adapts to the new mode
+        if let images = folderImages[id], !images.isEmpty {
+            let imageURL = images[photos[index].folderImageIndex]
+            if let image = NSImage(contentsOf: imageURL) {
+                let key = imageURL.lastPathComponent
+                let targetFrame = photos[index].folderImageConfigs[key].map { NSRectFromString($0.frameString) }
+                windows[id]?.swapImage(image, targetFrame: targetFrame, mode: mode, animate: true)
+            }
         }
         persist()
     }

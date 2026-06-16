@@ -7,153 +7,157 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		287C9D4CFD45CAC080B80278 /* ImageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44B86CC3BD0DBCDB62CF588E /* ImageManager.swift */; };
-		329CEC515E8166A74C886A7C /* FolderWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D1A88782D30FA559AB6C6D /* FolderWatcher.swift */; };
-		524AC76DBAA6AAC648443E6E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 98684E8807A3C4C9FF7C64B2 /* Assets.xcassets */; };
-		71A493A3540103271A6FB1C3 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E033620FF187A2FB24064A /* AppDelegate.swift */; };
-		82C5822A70958CFCC7E088FD /* PhotoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A35BD4FFDCB87CB6AFCED68 /* PhotoItem.swift */; };
-		B8D8DDC32BDECA3FD46466DD /* PhotoWidgetOSXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47256044EF37732D082D1D50 /* PhotoWidgetOSXApp.swift */; };
-		E971549EB25EC9537296A203 /* DesktopPhotoWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80E5A8720B71F18522DC935D /* DesktopPhotoWindow.swift */; };
-		F3252ADFA28BC60458B0D40D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0985FA4B2EC4ADF0F8B231 /* ContentView.swift */; };
+		1D213204E06B196C4CE34DDD /* PhotoWidgetOSXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AECD1F66F0B35184A84E006 /* PhotoWidgetOSXApp.swift */; };
+		21505C7CE328148D544A6A0A /* FolderWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 016BB413C28F8D55A1D1DFAB /* FolderWatcher.swift */; };
+		3D8B58FF158C6DE3FAB0C3E6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 877C01CDA67795DE4EF40F70 /* ContentView.swift */; };
+		3EB0B5142A23A2C55F5DCB3A /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475CF76E321700D3B0FE411B /* Constants.swift */; };
+		524280D26FA49B69D4C57B5D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8541A1636A4B5B3C5F5C767B /* Assets.xcassets */; };
+		8F6C22F4736C412B7F9A0C65 /* DesktopPhotoWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24B6BFA68C59F8921F61B18E /* DesktopPhotoWindow.swift */; };
+		9E4BEAFAB2A96FED694CE243 /* ImageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3159880EA2D19188C7F9D214 /* ImageManager.swift */; };
+		9F3E1582B4271830960B8864 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E335E996F9CBD4F89AD4D634 /* AppDelegate.swift */; };
+		C1C99B8B7D369E9C5B6BBF53 /* PhotoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A13F1F0FB05C71C07A0DC2 /* PhotoItem.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		44B86CC3BD0DBCDB62CF588E /* ImageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageManager.swift; sourceTree = "<group>"; };
-		47256044EF37732D082D1D50 /* PhotoWidgetOSXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoWidgetOSXApp.swift; sourceTree = "<group>"; };
-		66D1A88782D30FA559AB6C6D /* FolderWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatcher.swift; sourceTree = "<group>"; };
-		671F9CE9C7897D8C2D93FF8F /* PhotoWidgetOSX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoWidgetOSX.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		80E5A8720B71F18522DC935D /* DesktopPhotoWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPhotoWindow.swift; sourceTree = "<group>"; };
-		8A35BD4FFDCB87CB6AFCED68 /* PhotoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoItem.swift; sourceTree = "<group>"; };
-		98684E8807A3C4C9FF7C64B2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		9B0985FA4B2EC4ADF0F8B231 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		B7E033620FF187A2FB24064A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		016BB413C28F8D55A1D1DFAB /* FolderWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderWatcher.swift; sourceTree = "<group>"; };
+		24B6BFA68C59F8921F61B18E /* DesktopPhotoWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPhotoWindow.swift; sourceTree = "<group>"; };
+		28A13F1F0FB05C71C07A0DC2 /* PhotoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoItem.swift; sourceTree = "<group>"; };
+		2AECD1F66F0B35184A84E006 /* PhotoWidgetOSXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoWidgetOSXApp.swift; sourceTree = "<group>"; };
+		3159880EA2D19188C7F9D214 /* ImageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageManager.swift; sourceTree = "<group>"; };
+		475CF76E321700D3B0FE411B /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		8541A1636A4B5B3C5F5C767B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		877C01CDA67795DE4EF40F70 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		E335E996F9CBD4F89AD4D634 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		E7207FDCA56B8315D7261617 /* Tableau.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tableau.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		5D18B241D69E03434E45E0C7 /* Sources */ = {
+		63BE1F6C8D8447B9860724DC = {
 			isa = PBXGroup;
 			children = (
-				B3055216DA0392F61BE79CDF /* App */,
+				E2EC7BF01BDDBE14EC1B6CB1 /* Sources */,
+				A0701387CC5F06B548169493 /* Products */,
 			);
-			path = Sources;
 			sourceTree = "<group>";
 		};
-		7B1C5965F1DC3E5C0459D38F /* Products */ = {
+		A0701387CC5F06B548169493 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				671F9CE9C7897D8C2D93FF8F /* PhotoWidgetOSX.app */,
+				E7207FDCA56B8315D7261617 /* Tableau.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		ABDF9348BB463741E80EFFB8 = {
+		B4252C76D371378E48CACC0A /* App */ = {
 			isa = PBXGroup;
 			children = (
-				5D18B241D69E03434E45E0C7 /* Sources */,
-				7B1C5965F1DC3E5C0459D38F /* Products */,
-			);
-			sourceTree = "<group>";
-		};
-		B3055216DA0392F61BE79CDF /* App */ = {
-			isa = PBXGroup;
-			children = (
-				B7E033620FF187A2FB24064A /* AppDelegate.swift */,
-				98684E8807A3C4C9FF7C64B2 /* Assets.xcassets */,
-				9B0985FA4B2EC4ADF0F8B231 /* ContentView.swift */,
-				80E5A8720B71F18522DC935D /* DesktopPhotoWindow.swift */,
-				66D1A88782D30FA559AB6C6D /* FolderWatcher.swift */,
-				44B86CC3BD0DBCDB62CF588E /* ImageManager.swift */,
-				8A35BD4FFDCB87CB6AFCED68 /* PhotoItem.swift */,
-				47256044EF37732D082D1D50 /* PhotoWidgetOSXApp.swift */,
+				E335E996F9CBD4F89AD4D634 /* AppDelegate.swift */,
+				8541A1636A4B5B3C5F5C767B /* Assets.xcassets */,
+				475CF76E321700D3B0FE411B /* Constants.swift */,
+				877C01CDA67795DE4EF40F70 /* ContentView.swift */,
+				24B6BFA68C59F8921F61B18E /* DesktopPhotoWindow.swift */,
+				016BB413C28F8D55A1D1DFAB /* FolderWatcher.swift */,
+				3159880EA2D19188C7F9D214 /* ImageManager.swift */,
+				28A13F1F0FB05C71C07A0DC2 /* PhotoItem.swift */,
+				2AECD1F66F0B35184A84E006 /* PhotoWidgetOSXApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		E2EC7BF01BDDBE14EC1B6CB1 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B4252C76D371378E48CACC0A /* App */,
+			);
+			path = Sources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		5BE133EEE1B014BF2515414C /* PhotoWidgetOSX */ = {
+		E962C211A597EF2857DF3BBD /* Tableau */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7E35BAB2E77ED81CD3EB5AF9 /* Build configuration list for PBXNativeTarget "PhotoWidgetOSX" */;
+			buildConfigurationList = F2BCC6277CA734CABF02AC33 /* Build configuration list for PBXNativeTarget "Tableau" */;
 			buildPhases = (
-				558AF0112DBEFE6798A4FE1C /* Sources */,
-				158F3208842585531DBC22FA /* Resources */,
+				332951232066C15295B677D2 /* Sources */,
+				0CE0F5ACF154F28CC213FBF6 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = PhotoWidgetOSX;
+			name = Tableau;
 			packageProductDependencies = (
 			);
-			productName = PhotoWidgetOSX;
-			productReference = 671F9CE9C7897D8C2D93FF8F /* PhotoWidgetOSX.app */;
+			productName = Tableau;
+			productReference = E7207FDCA56B8315D7261617 /* Tableau.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		4E4354456D97E0C32B93605A /* Project object */ = {
+		D5A96DD769F433700EEB0ADF /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
-					5BE133EEE1B014BF2515414C = {
+					E962C211A597EF2857DF3BBD = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Manual;
 					};
 				};
 			};
-			buildConfigurationList = 2AAC98F7BF37C57837E5F095 /* Build configuration list for PBXProject "PhotoWidgetOSX" */;
+			buildConfigurationList = FDBFBD30678436BC00D3C94B /* Build configuration list for PBXProject "Tableau" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
 				en,
 			);
-			mainGroup = ABDF9348BB463741E80EFFB8;
+			mainGroup = 63BE1F6C8D8447B9860724DC;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 7B1C5965F1DC3E5C0459D38F /* Products */;
+			productRefGroup = A0701387CC5F06B548169493 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				5BE133EEE1B014BF2515414C /* PhotoWidgetOSX */,
+				E962C211A597EF2857DF3BBD /* Tableau */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		158F3208842585531DBC22FA /* Resources */ = {
+		0CE0F5ACF154F28CC213FBF6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				524AC76DBAA6AAC648443E6E /* Assets.xcassets in Resources */,
+				524280D26FA49B69D4C57B5D /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		558AF0112DBEFE6798A4FE1C /* Sources */ = {
+		332951232066C15295B677D2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				71A493A3540103271A6FB1C3 /* AppDelegate.swift in Sources */,
-				F3252ADFA28BC60458B0D40D /* ContentView.swift in Sources */,
-				E971549EB25EC9537296A203 /* DesktopPhotoWindow.swift in Sources */,
-				329CEC515E8166A74C886A7C /* FolderWatcher.swift in Sources */,
-				287C9D4CFD45CAC080B80278 /* ImageManager.swift in Sources */,
-				82C5822A70958CFCC7E088FD /* PhotoItem.swift in Sources */,
-				B8D8DDC32BDECA3FD46466DD /* PhotoWidgetOSXApp.swift in Sources */,
+				9F3E1582B4271830960B8864 /* AppDelegate.swift in Sources */,
+				3EB0B5142A23A2C55F5DCB3A /* Constants.swift in Sources */,
+				3D8B58FF158C6DE3FAB0C3E6 /* ContentView.swift in Sources */,
+				8F6C22F4736C412B7F9A0C65 /* DesktopPhotoWindow.swift in Sources */,
+				21505C7CE328148D544A6A0A /* FolderWatcher.swift in Sources */,
+				9E4BEAFAB2A96FED694CE243 /* ImageManager.swift in Sources */,
+				C1C99B8B7D369E9C5B6BBF53 /* PhotoItem.swift in Sources */,
+				1D213204E06B196C4CE34DDD /* PhotoWidgetOSXApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		118523D971AA6E7EC59FC658 /* Release */ = {
+		1139F536B312795DC6CE7415 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -162,27 +166,28 @@
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Photo Widget OSX";
+				INFOPLIST_KEY_CFBundleDisplayName = Tableau;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Photo Widget OSX needs access to your Desktop to place photo widgets.";
-				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Photo Widget OSX needs access to your folders to load images.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo Widget OSX needs access to your Photos library so you can pick images to display on your desktop.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Tableau needs access to your Desktop to place photo widgets.";
+				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Tableau needs access to your folders to load images.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Tableau needs access to your Photos library so you can pick images to display on your desktop.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yashashwi.photowidgetosx;
-				PRODUCT_NAME = "Photo Widget OSX";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yashashwi.tableau;
+				PRODUCT_NAME = Tableau;
 				SDKROOT = macosx;
 			};
-			name = Release;
+			name = Debug;
 		};
-		25D10DEBF26F466E9159F05B /* Release */ = {
+		27F10BD2759D7E7B886AEA44 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -216,9 +221,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -232,13 +239,14 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
 		};
-		8EBA9E28070241E6554DF375 /* Debug */ = {
+		87D8F076FBC4E43BE629FE90 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -272,9 +280,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -295,13 +305,14 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;
 		};
-		90DDC18E3898FC1DC01A951A /* Debug */ = {
+		B89DADF755A67DF2AD21766E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -310,48 +321,49 @@
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Photo Widget OSX";
+				INFOPLIST_KEY_CFBundleDisplayName = Tableau;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Photo Widget OSX needs access to your Desktop to place photo widgets.";
-				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Photo Widget OSX needs access to your folders to load images.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo Widget OSX needs access to your Photos library so you can pick images to display on your desktop.";
+				INFOPLIST_KEY_NSDesktopFolderUsageDescription = "Tableau needs access to your Desktop to place photo widgets.";
+				INFOPLIST_KEY_NSDocumentsFolderUsageDescription = "Tableau needs access to your folders to load images.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Tableau needs access to your Photos library so you can pick images to display on your desktop.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yashashwi.photowidgetosx;
-				PRODUCT_NAME = "Photo Widget OSX";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yashashwi.tableau;
+				PRODUCT_NAME = Tableau;
 				SDKROOT = macosx;
 			};
-			name = Debug;
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		2AAC98F7BF37C57837E5F095 /* Build configuration list for PBXProject "PhotoWidgetOSX" */ = {
+		F2BCC6277CA734CABF02AC33 /* Build configuration list for PBXNativeTarget "Tableau" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				8EBA9E28070241E6554DF375 /* Debug */,
-				25D10DEBF26F466E9159F05B /* Release */,
+				1139F536B312795DC6CE7415 /* Debug */,
+				B89DADF755A67DF2AD21766E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		7E35BAB2E77ED81CD3EB5AF9 /* Build configuration list for PBXNativeTarget "PhotoWidgetOSX" */ = {
+		FDBFBD30678436BC00D3C94B /* Build configuration list for PBXProject "Tableau" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				90DDC18E3898FC1DC01A951A /* Debug */,
-				118523D971AA6E7EC59FC658 /* Release */,
+				87D8F076FBC4E43BE629FE90 /* Debug */,
+				27F10BD2759D7E7B886AEA44 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 4E4354456D97E0C32B93605A /* Project object */;
+	rootObject = D5A96DD769F433700EEB0ADF /* Project object */;
 }

@@ -1,4 +1,4 @@
-# Photo Widget OSX — Features & Roadmap
+# Tableau — Features & Roadmap
 
 ## ✅ Shipped (v1.0.0) — Core Desktop Photo Widget
 
@@ -39,10 +39,10 @@
 
 ## ✅ Shipped (v1.1) — Floating Mode & Smart Canvas
 
-### Floating Mode
+### Floating Mode & Click-Through Constraints
 - [x] **Window level toggle** — switch between desktop level (behind everything) and floating level (above everything). Stored per photo, persisted across relaunches
-- [x] **Click-through (mouse passthrough)** — `ignoresMouseEvents = true` so the photo never steals focus
-- [x] **Modifier key override** — hold `Option` to temporarily re-enable interaction on a click-through photo
+- [x] **Linked Click-through** — `ignoresMouseEvents = true` so the photo never steals focus. Click-through mechanics are strictly bound to Floating Mode; turning off floating automatically disables click-through so you never permanently lose an image behind your active windows.
+- [x] **Global Modifier override** — A background macOS event monitor listens for the `Option (⌥)` key globally. Hold it to temporarily re-enable interaction on a click-through photo, even when the app is completely inactive!
 - [x] **Opacity slider** — per-photo 10%–100%. Scroll-wheel on the photo to adjust quickly
 
 ### Naming & Organization
@@ -64,9 +64,13 @@
 - [x] **Double-click to advance** — double-click the desktop photo to cycle to the next image (works even when locked)
 - [x] **Per-image position & size** — each image in a folder remembers its own position and size independently via `FolderImageConfig`. Drag image A somewhere, switch to B, switch back — A is exactly where you left it
 - [x] **GPU-accelerated crossfade** — `CATransition.fade` on the image layer for buttery-smooth image transitions
-- [x] **Simultaneous frame animation** — window frame smoothly adjusts to each new image's aspect ratio in sync with the crossfade
+- [x] **Simultaneous frame animation** — window frame and inner aesthetic layers (border, vignette, corner radius) smoothly interpolate to each new image's aspect ratio in sync with the crossfade using `allowsImplicitAnimation = true`
 - [x] **Top-left pin** — window pins its top-left corner during height changes so it doesn't jump around
 - [x] **Photos.app integration** — pick directly from Photos library via `PhotosPicker` (up to 20 at once)
+- [x] **Cyclic Sizing Modes** — toggle a folder between "Dynamic Fit" and "Fixed Frame". Instantly fires a synchronous layout reload that correctly un-letterboxes dynamic frames or securely crops to the newly saved fixed frame, avoiding toggle desyncs.
+
+### Mission Control Integration
+- [x] **Native OS Participation** — Windows are completely decoupled from the `.stationary` rigid background layer. When invoking Mission Control (3-fingers up) or App Exposé (3-fingers down), photos gracefully fly away and arrange themselves organically with other app windows instead of awkwardly hovering on the desktop.
 
 ### Settings Panel Polish
 - [x] **Hover backgrounds** — rows highlight on hover for clear interactivity feedback
@@ -151,7 +155,7 @@ Ultimate power-user and automation features.
 
 ```
 Sources/App/
-├── PhotoWidgetOSXApp.swift   # @main — delegates everything to AppDelegate
+├── TableauApp.swift   # @main — delegates everything to AppDelegate
 ├── AppDelegate.swift         # NSStatusItem menu (NSMenuDelegate) + settings window lifecycle
 ├── ContentView.swift         # SwiftUI settings UI (photo list, toggles, PhotosPicker, grouped controls)
 ├── DesktopPhotoWindow.swift  # Borderless NSWindow + DraggablePhotoView (drag/resize/right-click/crossfade)

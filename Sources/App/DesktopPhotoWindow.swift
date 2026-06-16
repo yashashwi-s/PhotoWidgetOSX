@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import QuartzCore
 
 /// A borderless, always-on-desktop window that displays a photo.
 class DesktopPhotoWindow: NSWindow {
@@ -10,7 +11,8 @@ class DesktopPhotoWindow: NSWindow {
     var onOpacityChanged: ((CGFloat) -> Void)?
     var onClickAdvance: (() -> Void)?
 
-    private var flagsMonitor: Any?
+    private var flagsMonitorLocal: Any?
+    private var flagsMonitorGlobal: Any?
     private var isClickThroughActive = false
 
     private static let desktopLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
@@ -29,7 +31,7 @@ class DesktopPhotoWindow: NSWindow {
         backgroundColor = .clear
         hasShadow = true
         ignoresMouseEvents = false
-        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        collectionBehavior = [.canJoinAllSpaces, .ignoresCycle]
         hidesOnDeactivate = false
     }
 
@@ -57,6 +59,10 @@ class DesktopPhotoWindow: NSWindow {
 
         contentView = container
         setContentSize(NSSize(width: w, height: h))
+
+        // Force layout synchronously before display to prevent snap flicker
+        self.disableScreenUpdatesUntilFlush()
+        container.updateLayout(NSSize(width: w, height: h))
 
         // Apply settings
         if let s = settings {
@@ -129,16 +135,23 @@ class DesktopPhotoWindow: NSWindow {
 
     private func setupFlagsMonitor() {
         teardownFlagsMonitor()
-        flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+        flagsMonitorLocal = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             self?.handleFlagsChanged(event)
             return event
+        }
+        flagsMonitorGlobal = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handleFlagsChanged(event)
         }
     }
 
     private func teardownFlagsMonitor() {
-        if let monitor = flagsMonitor {
-            NSEvent.removeMonitor(monitor)
-            flagsMonitor = nil
+        if let local = flagsMonitorLocal {
+            NSEvent.removeMonitor(local)
+            flagsMonitorLocal = nil
+        }
+        if let global = flagsMonitorGlobal {
+            NSEvent.removeMonitor(global)
+            flagsMonitorGlobal = nil
         }
     }
 
@@ -148,25 +161,33 @@ class DesktopPhotoWindow: NSWindow {
         ignoresMouseEvents = !optionDown
     }
 
-    // MARK: - Smooth image swap (CATransition crossfade + frame animation)
+    // MARK: - Smooth image swap (CATransition crossfade + dynamic frame)
 
-    func swapImage(_ newImage: NSImage, targetFrame: NSRect? = nil, animate: Bool = true) {
+    func swapImage(_ newImage: NSImage, targetFrame: NSRect? = nil, mode: String = "dynamic", animate: Bool = true) {
         guard let container = contentView as? DraggablePhotoView else { return }
         let newAR = newImage.size.width / newImage.size.height
-        container.aspectRatio = newAR
+        
+        if mode == "dynamic" {
+            container.aspectRatio = newAR
+        }
 
         // Determine target frame
         let newFrame: NSRect
-        if let target = targetFrame, target.width > 0 {
-            newFrame = target
+        if mode == "fixed" {
+            newFrame = frame // don't change frame
         } else {
-            // Keep current width, adjust height for new aspect ratio. Pin top-left.
-            let newH = frame.width / newAR
-            let newOriginY = frame.origin.y + frame.height - newH
-            newFrame = NSRect(x: frame.origin.x, y: newOriginY, width: frame.width, height: newH)
+            if let target = targetFrame, target.width > 0 {
+                newFrame = target
+            } else {
+                // Keep current width, adjust height for new aspect ratio. Pin top-left.
+                let newH = frame.width / newAR
+                let newOriginY = frame.origin.y + frame.height - newH
+                newFrame = NSRect(x: frame.origin.x, y: newOriginY, width: frame.width, height: newH)
+            }
         }
 
         if animate {
+            self.disableScreenUpdatesUntilFlush()
             // GPU-accelerated crossfade via Core Animation
             let transition = CATransition()
             transition.type = .fade
@@ -182,8 +203,8 @@ class DesktopPhotoWindow: NSWindow {
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.35
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                ctx.allowsImplicitAnimation = true
                 self.animator().setFrame(newFrame, display: true)
-            } completionHandler: {
                 container.updateLayout(newFrame.size)
             }
         } else {
@@ -201,10 +222,28 @@ private enum DragMode {
     case resizeTopLeft, resizeTopRight, resizeBottomLeft, resizeBottomRight
 }
 
+// MARK: - Aspect Fill Image View
+
+class AspectFillImageView: NSView {
+    var image: NSImage? {
+        didSet {
+            layer?.contents = image
+        }
+    }
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.contentsGravity = .resizeAspectFill
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+}
+
 // MARK: - Draggable Photo View
 
 class DraggablePhotoView: NSView {
-    let imageView: NSImageView
+    let imageView: AspectFillImageView
     var photoImage: NSImage? { imageView.image }
     var isLocked = false
 
@@ -213,11 +252,13 @@ class DraggablePhotoView: NSView {
     var onResizeFinished: ((CGFloat) -> Void)?
     var onOpacityChanged: ((CGFloat) -> Void)?
     var onClickAdvance: (() -> Void)?
+    private var lastAdvanceTime: TimeInterval = 0
 
     private var dragMode: DragMode = .none
     private var initialMouse: NSPoint = .zero
     private var anchorPoint: NSPoint = .zero   // the fixed corner (screen coords)
     var aspectRatio: CGFloat = 1.0
+    var baseCornerRadius: CGFloat = 16
     private let handleZone: CGFloat = 12
     private let minSize: CGFloat = 80
 
@@ -226,12 +267,12 @@ class DraggablePhotoView: NSView {
     private var vignetteLayer: CAGradientLayer?
 
     init(frame: NSRect, image: NSImage, locked: Bool, settings: PhotoItem? = nil) {
-        imageView = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
+        imageView = AspectFillImageView(frame: NSRect(origin: .zero, size: frame.size))
         imageView.image = image
-        imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.wantsLayer = true
 
         let cr = settings?.cornerRadius ?? 16
+        self.baseCornerRadius = cr
         imageView.layer?.cornerRadius = min(cr, min(frame.width, frame.height) * 0.3)
         imageView.layer?.masksToBounds = true
         imageView.layer?.cornerCurve = .continuous
@@ -277,8 +318,7 @@ class DraggablePhotoView: NSView {
 
         // Recalculate corner radius relative to size
         let maxRadius = min(size.width, size.height) * 0.3
-        let currentRadius = imageView.layer?.cornerRadius ?? 16
-        imageView.layer?.cornerRadius = min(currentRadius, maxRadius)
+        imageView.layer?.cornerRadius = min(baseCornerRadius, maxRadius)
 
         // Update border path
         if let bl = borderLayer {
@@ -298,8 +338,9 @@ class DraggablePhotoView: NSView {
     // MARK: - v1.3 Aesthetic Controls
 
     func setCornerRadius(_ radius: CGFloat) {
+        baseCornerRadius = radius
         let maxRadius = min(bounds.width, bounds.height) * 0.3
-        let clamped = min(radius, maxRadius)
+        let clamped = min(baseCornerRadius, maxRadius)
         imageView.layer?.cornerRadius = clamped
 
         // Update border path if present
@@ -407,17 +448,16 @@ class DraggablePhotoView: NSView {
     // MARK: - Mouse events
 
     override func mouseDown(with event: NSEvent) {
-        if isLocked {
-            // Even when locked, double-click advances folder images
-            if event.clickCount == 2 { onClickAdvance?() }
+        if event.clickCount == 2 {
+            let now = Date().timeIntervalSince1970
+            if now - lastAdvanceTime > 0.3 {
+                lastAdvanceTime = now
+                onClickAdvance?()
+            }
             return
         }
 
-        // Double-click advances folder images
-        if event.clickCount == 2 {
-            onClickAdvance?()
-            return
-        }
+        if isLocked { return }
 
         guard let win = window else { return }
         let p = convert(event.locationInWindow, from: nil)
