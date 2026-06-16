@@ -1,6 +1,6 @@
 # Tableau — Features & Roadmap
 
-## ✅ Shipped (v1.0.0) — Core Desktop Photo Widget
+## ✅ Shipped (v1.0) — Core Desktop Photo Widget
 
 ### Core
 - [x] Desktop photo overlay — borderless `NSWindow` at `desktopIcon` level, always behind normal windows
@@ -37,7 +37,7 @@
 
 ---
 
-## ✅ Shipped (v1.1) — Floating Mode & Smart Canvas
+## ✅ Shipped (v2.0) — The Smart Canvas Update
 
 ### Floating Mode & Click-Through Constraints
 - [x] **Window level toggle** — switch between desktop level (behind everything) and floating level (above everything). Stored per photo, persisted across relaunches
@@ -83,7 +83,7 @@
 
 ## 🔮 Roadmap
 
-### v1.2 — Multi-Monitor & Spaces
+### v2.1 — Multi-Monitor & Spaces
 
 macOS Spaces support is already partially there (`canJoinAllSpaces`), but there's more to do.
 
@@ -92,7 +92,7 @@ macOS Spaces support is already partially there (`canJoinAllSpaces`), but there'
 - [ ] **Snap to edges** — magnetic snapping when dragging near screen edges or other photos
 - [ ] **Alignment guides** — show guides when a photo lines up with the edge or center of another photo
 
-### v1.3 — Keyboard & CLI
+### v2.2 — Keyboard & CLI
 
 Power user territory.
 
@@ -101,7 +101,7 @@ Power user territory.
 - [ ] **Apple Shortcuts support** — expose actions (add photo, toggle visibility, set opacity) to the Shortcuts app
 - [ ] **URL scheme** — `photowidget://add?path=...` for integration with other apps
 
-### v1.4 — Content Types
+### v2.3 — Content Types
 
 Expand beyond static images.
 
@@ -111,7 +111,7 @@ Expand beyond static images.
 - [ ] **Live web preview** — embed a `WKWebView` to display a live webpage (weather, calendar, dashboard) as a desktop widget
 - [ ] **PDF pages** — display a specific page from a PDF, useful for cheat sheets and reference cards
 
-### v1.5 — Grid Builder
+### v2.4 — Grid Builder
 
 An in-app interface for creating structured photo layouts as a single composite widget.
 
@@ -122,7 +122,7 @@ An in-app interface for creating structured photo layouts as a single composite 
 - [ ] **Grid as single object** — the composed grid moves, resizes, and locks as one unit. One entry in the menu bar, one entry in settings
 - [ ] **Export grid** — render the current grid layout as a single high-res image for sharing or wallpaper use
 
-### v1.6 — Smart Wallpaper Integration
+### v2.5 — Smart Wallpaper Integration
 
 Bridge the gap between desktop photos and system wallpaper.
 
@@ -130,7 +130,7 @@ Bridge the gap between desktop photos and system wallpaper.
 - [ ] **Automatic theme adaptation** — when macOS switches between Light/Dark mode, adjust border colors, shadow intensity, and opacity to maintain visual harmony
 - [ ] **Time-based profiles** — different photo layouts for morning/afternoon/evening (tied to system appearance schedule)
 
-### v1.7 — Collaboration & Sharing
+### v2.6 — Collaboration & Sharing
 
 Turn Photo Widget into a social/team tool.
 
@@ -139,7 +139,7 @@ Turn Photo Widget into a social/team tool.
 - [ ] **iCloud sync** — sync photo widgets across your Mac, including positions, settings, and images (opt-in per photo)
 - [ ] **Shared folders** — point Smart Canvas at a shared iCloud/Dropbox folder so a team can push images to each other's desktops
 
-### v1.8 — Scriptable Desktop
+### v2.7 — Scriptable Desktop
 
 Ultimate power-user and automation features.
 

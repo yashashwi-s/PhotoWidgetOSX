@@ -1,6 +1,8 @@
 # Tableau
 
 > Place any photo on your macOS desktop as a perfectly fitted, borderless widget — exactly the right aspect ratio, no cropping, no black bars.
+> 
+> *Note: Tableau was formerly named as **Photo Widget OSX**.*
 
 <p align="center">
   <img src="assets/demo.gif" alt="Tableau Action Demo" width="100%" />
