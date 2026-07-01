@@ -1,153 +1,105 @@
 # Tableau — Features & Roadmap
 
-## ✅ Shipped (v1.0) — Core Desktop Photo Widget
+## Current Version
 
 ### Core
 - [x] Desktop photo overlay — borderless `NSWindow` at `desktopIcon` level, always behind normal windows
 - [x] True aspect ratio — window dimensions match the image exactly. No cropping, no letterboxing
 - [x] Multiple independent photos — each gets its own window, position, size, lock state
-- [x] Rounded corners (16px, continuous curve) + drop shadow for native macOS widget look
-
-### Interaction
+- [x] Rounded corners (continuous curve) + drop shadow for native macOS widget look
 - [x] Drag to reposition anywhere on screen
 - [x] Corner resize — drag any of the 4 corners, aspect ratio always locked
 - [x] Lock position toggle (right-click or menu bar)
 - [x] Cursor feedback — crosshair near corners, open hand in center
+- [x] Right-click context menu directly on the photo overlay (Reveal in Finder)
 
-### Persistence
-- [x] All state saved to `~/Library/Application Support/PhotoWidget/photos.json`
-- [x] Photos stored as JPEG copies (90% quality) in the same directory
-- [x] Position, size, lock state, visibility all restored on relaunch
-- [x] Atomic save on quit (`NSApplication.willTerminate`)
-
-### App Shell
-- [x] Menu bar agent (`LSUIElement`) — no dock icon, no window clutter
-- [x] Full `NSStatusItem` menu: add, show/hide, lock/unlock, remove per photo
-- [x] Per-photo submenus with thumbnail previews
-- [x] Right-click context menu directly on the photo overlay
-- [x] Settings window with photo list, visibility toggles, remove buttons
-- [x] Launch at Login via `SMAppService`
-- [x] Hide menu bar icon (reopen app from Spotlight/Applications to restore)
-- [x] Multi-select file picker (JPEG, PNG, HEIC, TIFF)
-- [x] **Menu bar auto-refresh** — `NSMenuDelegate` rebuilds the menu every time it opens, always in sync with settings
-
-### Performance
-- [x] ~20MB RAM, zero CPU at idle — no timers, no polling, no background threads
-- [x] Joins all Spaces (`canJoinAllSpaces`, `stationary`)
-
----
-
-## ✅ Shipped (v2.0) — The Smart Canvas Update
-
-### Floating Mode & Click-Through Constraints
+### Floating Mode & Click-Through
 - [x] **Window level toggle** — switch between desktop level (behind everything) and floating level (above everything). Stored per photo, persisted across relaunches
-- [x] **Linked Click-through** — `ignoresMouseEvents = true` so the photo never steals focus. Click-through mechanics are strictly bound to Floating Mode; turning off floating automatically disables click-through so you never permanently lose an image behind your active windows.
-- [x] **Global Modifier override** — A background macOS event monitor listens for the `Option (⌥)` key globally. Hold it to temporarily re-enable interaction on a click-through photo, even when the app is completely inactive!
-- [x] **Opacity slider** — per-photo 10%–100%. Scroll-wheel on the photo to adjust quickly
+- [x] **Click-through** — `ignoresMouseEvents = true` so the photo never steals focus. Click-through is strictly bound to Floating Mode; turning off floating automatically disables click-through
+- [x] **Option (⌥) key override** — hold Option to temporarily re-enable interaction on a click-through photo, even when the app is completely inactive
+- [x] **Opacity slider** — per-photo 10%–100%. Scroll-wheel on the photo adjusts it quickly
 
 ### Naming & Organization
-- [x] **Custom photo names** — rename from settings or menu bar
-- [x] **Replace photo** — swaps the file but keeps position, size, lock, name, and all settings
+- [x] **Custom photo names** — rename from settings panel or menu bar
+- [x] **Replace photo** — swaps the image file but keeps position, size, lock, name, and all settings
 - [x] **Duplicate photo** — creates a copy at a slightly offset position
+- [x] **Reorder photos** — drag to reorder items in the settings list
+- [x] **Reveal in Finder** — right-click any row in settings to jump to the source file or folder
 
 ### Aesthetic Controls (Per Photo)
 - [x] **Corner radius slider** — 0px (sharp square) to 50px
-- [x] **Shadow control** — toggle on/off, adjust blur radius and opacity
-- [x] **Border** — adjustable width with color picker
-- [x] **Edge fade (vignette)** — subtle fade-to-transparent at photo edges
+- [x] **Shadow** — toggle on/off, adjust blur radius and opacity independently
+- [x] **Border** — adjustable width (0–5px) with a full color picker
+- [x] **Edge fade (vignette)** — subtle gradient fade-to-transparent at photo edges
 
 ### Smart Canvas (Folder Mode)
-- [x] **Folder import** — point a widget at any folder. Only images are used (JPEG, PNG, HEIC, TIFF, GIF, WebP, BMP). Non-image files are silently ignored
-- [x] **Folder watcher** — `DispatchSource` monitors the folder for changes in real-time
-- [x] **Rotation intervals** — On Click, 30 seconds, 5 minutes, Hourly, Daily, Custom (user-defined seconds)
-- [x] **Custom rotation** — text field for arbitrary interval in seconds (minimum 5s)
-- [x] **Double-click to advance** — double-click the desktop photo to cycle to the next image (works even when locked)
-- [x] **Per-image position & size** — each image in a folder remembers its own position and size independently via `FolderImageConfig`. Drag image A somewhere, switch to B, switch back — A is exactly where you left it
-- [x] **GPU-accelerated crossfade** — `CATransition.fade` on the image layer for buttery-smooth image transitions
-- [x] **Simultaneous frame animation** — window frame and inner aesthetic layers (border, vignette, corner radius) smoothly interpolate to each new image's aspect ratio in sync with the crossfade using `allowsImplicitAnimation = true`
-- [x] **Top-left pin** — window pins its top-left corner during height changes so it doesn't jump around
-- [x] **Photos.app integration** — pick directly from Photos library via `PhotosPicker` (up to 20 at once)
-- [x] **Cyclic Sizing Modes** — toggle a folder between "Dynamic Fit" and "Fixed Frame". Instantly fires a synchronous layout reload that correctly un-letterboxes dynamic frames or securely crops to the newly saved fixed frame, avoiding toggle desyncs.
+- [x] **Folder import** — point a widget at any folder; only images are used (JPEG, PNG, HEIC, TIFF, GIF, WebP, BMP). Non-image files are silently ignored
+- [x] **Live folder watcher** — `DispatchSource` monitors the folder for changes in real-time; new images appear automatically
+- [x] **Rotation intervals** — On Click, 30 seconds, 5 minutes, Hourly, Daily, Custom
+- [x] **Custom rotation interval** — text field for any interval in seconds (minimum 5s)
+- [x] **Double-click to advance** — double-click the desktop photo to cycle to the next image (works even when position is locked)
+- [x] **Per-image position & size** — each image in a folder remembers its own position and size independently. Drag image A somewhere, switch to B, switch back — A is exactly where you left it
+- [x] **GPU-accelerated crossfade** — `CATransition.fade` on the image layer for smooth image transitions
+- [x] **Simultaneous frame animation** — window frame and aesthetic layers (border, vignette, corner radius) animate in sync with the crossfade
+- [x] **Top-left pin** — window pins its top-left corner during height changes so it doesn't jump
+- [x] **Sizing modes** — toggle a folder between "Dynamic Fit" (images resize to their true aspect ratio, each remembers its own size) and "Fixed Frame" (widget stays fixed, images scale and crop to fill)
+- [x] **Previous/Next navigation** — step backwards or forwards through folder images from settings or menu bar
 
 ### Mission Control Integration
-- [x] **Native OS Participation** — Windows are completely decoupled from the `.stationary` rigid background layer. When invoking Mission Control (3-fingers up) or App Exposé (3-fingers down), photos gracefully fly away and arrange themselves organically with other app windows instead of awkwardly hovering on the desktop.
+- [x] Windows participate natively in Mission Control (3-fingers up) and App Exposé (3-fingers down) — photos fly away and arrange themselves with other app windows instead of pinning to the desktop background
 
-### Settings Panel Polish
-- [x] **Hover backgrounds** — rows highlight on hover for clear interactivity feedback
-- [x] **Clean expand/collapse** — `easeInOut(0.15s)`, no spring bounce, no transition artifacts
-- [x] **Full-row click target** — click anywhere on the row header to expand/collapse (not just the chevron)
+### App Shell & Settings Panel
+- [x] Menu bar agent (`LSUIElement`) — no dock icon, no window clutter
+- [x] Full `NSStatusItem` menu: add, show/hide, lock/unlock, remove per photo — with per-photo thumbnails and status badges (hidden, locked, floating, folder)
+- [x] **NSMenuDelegate** — menu rebuilds every time it opens, always in sync with state
+- [x] Settings window with expandable photo rows, visibility toggle, trash button, and per-photo controls
+- [x] **Hover backgrounds** — rows highlight on hover; full-row click target to expand/collapse
 - [x] **Grouped settings** — MODE, APPEARANCE, SMART CANVAS sections with uppercase headers
-- [x] **Consistent control sizes** — all sliders, toggles, pickers use `.controlSize(.small/.mini)` throughout
+- [x] **Photos.app integration** — pick directly from Photos library via `PhotosPicker` (up to 20 at once)
+- [x] Multi-select file picker — JPEG, PNG, HEIC, TIFF supported
+- [x] Launch at Login via `SMAppService`
+- [x] Hide menu bar icon (reopen from Spotlight/Applications to restore)
+- [x] Remove All Photos action in menu bar
+
+### Performance & Persistence
+- [x] ~20MB RAM, near-zero CPU at idle — no polling, no background threads except the folder watcher
+- [x] Joins all Spaces (`canJoinAllSpaces`, `stationary`)
+- [x] All state saved to `~/Library/Application Support/PhotoWidget/photos.json`
+- [x] Photos stored as JPEG copies (90% quality) in the same directory
+- [x] Position, size, lock state, visibility, all aesthetic settings — all restored on relaunch
+- [x] Atomic save on quit (`NSApplication.willTerminate`) and on every drag/resize
+
+### CI/CD
+- [x] Local `build.sh` — `--run` installs and launches without opening Xcode, `--release` packages `.zip` and `.dmg`
+- [x] GitHub Actions CI — builds on every push and PR to `main`, validates app bundle size
+- [x] GitHub Actions Release — automatically builds, packages, and publishes to GitHub Releases on any `v*` tag push
 
 ---
 
-## 🔮 Roadmap
+## Later
 
-### v2.1 — Multi-Monitor & Spaces
-
-macOS Spaces support is already partially there (`canJoinAllSpaces`), but there's more to do.
-
-- [ ] **Per-display profiles** — remember which photos belong to which monitor. When a display disconnects, hide those photos. When it reconnects, restore them
-- [ ] **Space binding** — optionally pin a photo to a specific Space instead of all Spaces
+- [ ] **Per-display profiles** — remember which photos belong to which monitor; hide/restore when display disconnects or reconnects
+- [ ] **Space binding** — pin a photo to a specific Space instead of all Spaces
 - [ ] **Snap to edges** — magnetic snapping when dragging near screen edges or other photos
-- [ ] **Alignment guides** — show guides when a photo lines up with the edge or center of another photo
-
-### v2.2 — Keyboard & CLI
-
-Power user territory.
-
-- [ ] **Global hotkey** — toggle all photos visible/hidden with a single shortcut (e.g., `⌘⇧P`)
-- [ ] **CLI interface** — `photowidget add ~/path/to/image.jpg --floating --opacity 0.5` for scripting and automation
+- [ ] **Alignment guides** — show temporary guides when a photo aligns with the edge or center of another
+- [ ] **Global hotkey** — toggle all photos visible/hidden with a single shortcut
 - [ ] **Apple Shortcuts support** — expose actions (add photo, toggle visibility, set opacity) to the Shortcuts app
-- [ ] **URL scheme** — `photowidget://add?path=...` for integration with other apps
-
-### v2.3 — Content Types
-
-Expand beyond static images.
-
-- [ ] **Animated GIF playback** — render GIFs natively on the desktop using `CALayer` animation
-- [ ] **Screenshots from clipboard** — paste `⌘V` to instantly create a widget from clipboard image
-- [ ] **Drag & drop onto menu bar icon** — drop an image file onto the status item to add it
-- [ ] **Live web preview** — embed a `WKWebView` to display a live webpage (weather, calendar, dashboard) as a desktop widget
-- [ ] **PDF pages** — display a specific page from a PDF, useful for cheat sheets and reference cards
-
-### v2.4 — Grid Builder
-
-An in-app interface for creating structured photo layouts as a single composite widget.
-
-- [ ] **Grid canvas** — define rows and columns, drag photos into cells. The entire grid renders as one borderless window on the desktop
-- [ ] **Snap mechanics** — photos snap to grid cells with magnetic alignment. Drag to reorder within the grid
-- [ ] **Auto-layout** — choose from preset layouts (2×2, 3×1 filmstrip, 1+2 hero, masonry) or define custom row/column ratios
-- [ ] **Per-cell controls** — each cell inherits the per-photo aesthetic controls (corner radius, border, opacity) independently
-- [ ] **Grid as single object** — the composed grid moves, resizes, and locks as one unit. One entry in the menu bar, one entry in settings
-- [ ] **Export grid** — render the current grid layout as a single high-res image for sharing or wallpaper use
-
-### v2.5 — Smart Wallpaper Integration
-
-Bridge the gap between desktop photos and system wallpaper.
-
-- [ ] **Wallpaper-aware placement** — detect the current wallpaper's dominant colors and suggest optimal photo positions to avoid visual clashing
-- [ ] **Automatic theme adaptation** — when macOS switches between Light/Dark mode, adjust border colors, shadow intensity, and opacity to maintain visual harmony
-- [ ] **Time-based profiles** — different photo layouts for morning/afternoon/evening (tied to system appearance schedule)
-
-### v2.6 — Collaboration & Sharing
-
-Turn Photo Widget into a social/team tool.
-
-- [ ] **Export configuration** — export a `.photowidget` bundle containing all photos, positions, sizes, and settings. Send to a teammate, they get the exact same layout
-- [ ] **Import configuration** — drag a `.photowidget` file onto the app to import an entire layout
-- [ ] **iCloud sync** — sync photo widgets across your Mac, including positions, settings, and images (opt-in per photo)
-- [ ] **Shared folders** — point Smart Canvas at a shared iCloud/Dropbox folder so a team can push images to each other's desktops
-
-### v2.7 — Scriptable Desktop
-
-Ultimate power-user and automation features.
-
+- [ ] **URL scheme** — `tableau://add?path=...` for integration with other apps
+- [ ] **CLI interface** — `tableau add ~/path/to/image.jpg --floating --opacity 0.5`
+- [ ] **Animated GIF playback** — render GIFs natively on the desktop
+- [ ] **Paste from clipboard** — `⌘V` to instantly create a widget from a clipboard image
+- [ ] **Drag & drop onto menu bar icon** — drop an image file directly onto the status item to add it
+- [ ] **Live web preview** — embed a `WKWebView` to display a live webpage as a desktop widget
+- [ ] **PDF pages** — display a specific page from a PDF
+- [ ] **Grid builder** — define rows/columns, drag photos into cells; the whole grid moves as one object
+- [ ] **Wallpaper-aware placement** — detect wallpaper's dominant colors and suggest positions to avoid clashing
+- [ ] **Automatic theme adaptation** — adjust border color, shadow, and opacity when macOS switches Light/Dark mode
+- [ ] **Export/import layout** — save a `.tableau` bundle of all photos, positions, and settings; import on another Mac
+- [ ] **iCloud sync** — sync widgets across your Macs (opt-in per photo)
 - [ ] **AppleScript dictionary** — full scriptability: add/remove photos, set properties, query state
 - [ ] **Raycast extension** — search, toggle, and manage photos directly from Raycast
-- [ ] **Alfred workflow** — same for Alfred users
-- [ ] **Accessibility labels** — VoiceOver support for all interactive elements
-- [ ] **Plugin API** — expose a lightweight API for third-party plugins to add custom content types (clocks, calendars, system monitors)
+- [ ] **VoiceOver support** — accessibility labels for all interactive elements
+- [ ] **System accent color integration** — apply the user's macOS accent color to UI elements
 
 ---
 
@@ -155,7 +107,7 @@ Ultimate power-user and automation features.
 
 ```
 Sources/App/
-├── TableauApp.swift   # @main — delegates everything to AppDelegate
+├── PhotoWidgetOSXApp.swift   # @main — delegates everything to AppDelegate
 ├── AppDelegate.swift         # NSStatusItem menu (NSMenuDelegate) + settings window lifecycle
 ├── ContentView.swift         # SwiftUI settings UI (photo list, toggles, PhotosPicker, grouped controls)
 ├── DesktopPhotoWindow.swift  # Borderless NSWindow + DraggablePhotoView (drag/resize/right-click/crossfade)
@@ -178,5 +130,6 @@ Sources/App/
 - `NSMenuDelegate.menuNeedsUpdate` rebuilds the menu lazily each time it opens — always in sync
 - `FolderImageConfig` stores per-image position/size keyed by filename within each `PhotoItem`
 - `CATransition.fade` for GPU-accelerated crossfade, simultaneous with `NSAnimationContext` frame animation
-- All SwiftUI animations use `easeInOut` only — no springs, no bounces, matching native macOS behavior
+- All SwiftUI animations use `easeInOut` only — no springs, no bounces, matching native macOS feel
 - Settings panel uses hover state + background transitions for interactive feedback
+- `isReleasedWhenClosed = false` on all `DesktopPhotoWindow` instances to prevent use-after-free on re-show

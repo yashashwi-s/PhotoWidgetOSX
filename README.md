@@ -63,36 +63,40 @@ Then double-click the app to open it normally.
 
 ### Core
 - 🖼️ **Any aspect ratio** — no cropping, no black bars, ever
-- 📌 **Multiple photos** — add as many as you want, each independent
+- 📌 **Multiple photos** — add as many as you want, each fully independent
 - 🔒 **Lock position** — right-click photo or use menu bar to lock/unlock
 - ↔️ **Corner resize** — drag any corner to resize (aspect ratio locked)
-- 💾 **Remembers everything** — photos, positions, sizes, settings all persist
+- 💾 **Remembers everything** — photos, positions, sizes, all settings persist across relaunches
 - 🪶 **Ultra lightweight** — ~20MB RAM, zero CPU when idle
 
 ### Floating Mode
 - 🪟 **Float above windows** — turn any photo into a floating reference (above all windows)
 - 👆 **Click-through** — photos pass mouse events through so they never steal focus
-- ⌥ **Option key override** — hold Option to interact with a click-through photo
+- ⌥ **Option key override** — hold Option to interact with a click-through photo at any time
 - 🎚️ **Per-photo opacity** — scroll wheel on any photo to adjust (10%–100%)
 
 ### Smart Canvas (Folders)
 - 📁 **Folder import** — point a widget at any folder, only images are used
-- 🔄 **Rotation** — on click, 30s, 5m, hourly, daily, or custom interval
+- 🔄 **Rotation** — on click, 30s, 5m, hourly, daily, or custom interval (minimum 5s)
 - 🖱️ **Double-click to advance** — double-click any folder photo to go to the next image
 - 📐 **Per-image position & size** — each image in a folder remembers its own layout independently
 - ✨ **GPU crossfade** — smooth Core Animation transition between images
+- 🔲 **Sizing modes** — Dynamic (each image resizes to its true ratio) or Fixed Frame (images crop to fill a locked frame)
+- ⬅️ **Previous/Next navigation** — step through folder images from settings or menu bar
 
 ### Aesthetics (Per Photo)
-- 🎨 **Corner radius** — 0px (sharp) to 50px (pill)
+- 🎨 **Corner radius** — 0px (sharp) to 50px
 - 🌑 **Shadow** — toggle + blur/opacity controls
 - 🖼️ **Border** — adjustable width with color picker
 - 🌫️ **Edge fade** — subtle vignette that blends into your wallpaper
 
 ### App Shell
 - 🚀 **Launch at Login** — starts automatically with your Mac
+- 🖥️ **Mission Control** — photos fly away naturally in Mission Control and App Exposé
 - 📱 **Photos.app integration** — pick directly from your Photos library (up to 20 at once)
 - 🔽 **Hide menu bar icon** — reopen from Spotlight to restore
-- 🔄 **Live menu sync** — menu bar always reflects current state
+- 🔄 **Live menu sync** — menu bar always reflects current state with thumbnails and status badges
+- 🔍 **Reveal in Finder** — right-click any photo row to jump to the source file or folder
 
 ## Why not the App Store?
 
@@ -159,4 +163,4 @@ MIT — use it, fork it, do whatever you want.
 
 ## Roadmap
 
-See [FEATURES.md](FEATURES.md) for the full roadmap through v1.8, including multi-monitor support, keyboard shortcuts, grid builder, smart wallpaper integration, and scriptable desktop.
+See [FEATURES.md](FEATURES.md) for the full feature list and future roadmap, including multi-monitor support, keyboard shortcuts, grid builder, smart wallpaper integration, and more.
